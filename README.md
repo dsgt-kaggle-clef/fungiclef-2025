@@ -1,17 +1,4 @@
-# clef-project-template
-
-This is a template repository for CLEF projects. It is meant to be forked and used as a starting point for new projects.
-
-## TODOS
-
-1. Fork this repository.
-2. Update the `my_task_package` directory with the name of your task package e.g. `birdclef` or `longeval`.
-3. Update the `pyproject.toml` file with the following elements:
-   1. `project:name` should be a hyphenated version of the task package
-   2. `project:authors` should be updated with the names of the team members
-   3. `project:urls` should be updated with the corresponding URLs for the project
-   4. `tools.setuptools.packages.find:include` should be updated with the directory name of the task package
-4. Update `user/my-username` and the corresponding `README.md` file with the username and a description of the user's directory.
+# fungiclef-2025
 
 ## quickstart
 

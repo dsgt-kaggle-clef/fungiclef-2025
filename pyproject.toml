@@ -1,15 +1,15 @@
 [project]
-name = "my-task-project"
-version = "0.1.1"
-authors = [{ name = "Anthony Miyaguchi", email = "acmiyaguchi@gatech.edu" }]
-description = "DS@GT CLEF project template"
+name = "fungiclef-2025"
+version = "0.1.0"
+authors = [{ name = "Anthony Miyaguchi", email = "acmiyaguchi@gatech.edu" }, { name = "Jason Kahei Tam", email = "jtam30@gatech.edu"}]
+description = "DS@GT CLEF 2025 package for FungiCLEF"
 readme = "README.md"
 requires-python = ">=3.8"
 dynamic = ["dependencies"]
 
 [project.urls]
-Homepage = "https://github.com/dsgt-kaggle-clef/clef-project-template"
-Issues = "https://github.com/dsgt-kaggle-clef/clef-project-template/issues"
+Homepage = "https://github.com/dsgt-kaggle-clef/fungiclef-2025"
+Issues = "https://github.com/dsgt-kaggle-clef/fungiclef-2025/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -20,5 +20,5 @@ dependencies = { file = "requirements.txt" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["my_task_package*"]
+include = ["fungiclef*"]
 namespaces = false
