@@ -167,3 +167,6 @@ cython_debug/
 user/tamncheese/all.csv
 user/tamncheese/FungiCLEF2023_train_metadata_PRODUCTION.csv
 user/tamncheese/FungiCLEF2023_val_metadata_PRODUCTION.csv
+/user/tamncheese/_dataset_trial/model_trial.pth
+/user/tamncheese/_dataset_trial/metadata_trial.csv
+/user/tamncheese/_dataset_trial/metadata_trial.csv

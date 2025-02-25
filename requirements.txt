@@ -6,6 +6,11 @@ tqdm
 pyspark >= 3.4.0
 pyarrow
 luigi
+torch
+transformers
+opencv-python
+csv
+#add all the dependencies
 
 
 # developer tools
