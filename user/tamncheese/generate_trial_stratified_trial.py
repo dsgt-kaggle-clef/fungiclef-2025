@@ -10,10 +10,9 @@ df = pd.read_csv(
     "/storage/scratch1/5/jtam30/FungiCLEF2023_train_metadata_PRODUCTION.csv"
 )
 label = "species"
-print("hi")
 print(f"Dataset shape: {df.shape}")
 df = df.dropna(subset=[label]).reset_index(drop=True)
-print(f"Dataset shape: {df.shape}")
+print(f"Dataset shape after dropping NaN: {df.shape}")
 print(f"Target column shape: {df['species'].shape}")  # Ensure both match
 
 #

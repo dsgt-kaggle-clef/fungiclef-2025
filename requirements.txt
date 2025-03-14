@@ -9,7 +9,7 @@ luigi
 torch
 transformers
 opencv-python
-csv
+ipywidgets
 #add all the dependencies
 
 
