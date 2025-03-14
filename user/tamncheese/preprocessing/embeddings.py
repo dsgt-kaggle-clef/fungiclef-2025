@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
+### This assume the images are saved in scratch/fungiclef/dataset
+
 print("finish import")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_name = "facebook/dinov2-base"
@@ -50,14 +52,19 @@ def extract_embeddings(image_paths, batch_size=8):
     return np.array(embeddings), image_names
 
 
-image_dir = os.path.join(os.environ["HOME"], "scratch/fungi2024")
+image_dir = os.path.join(
+    os.environ["HOME"],
+    "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/720p",
+)
 image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
-
-batch_size = 64
+batch_size = 256
 embeddings, image_names = extract_embeddings(image_files, batch_size=batch_size)
 
 df_embeddings = pd.DataFrame(embeddings)
 df_embeddings.insert(0, "image_name", image_names)
-df_embeddings.to_parquet("fungi_train_embeddings.parquet", index=False)
+embeddings_dir = os.path.join(
+    os.environ["HOME"], "scratch/fungiclef/embeddings/fungi_train_embeddings.parquet"
+)
+df_embeddings.to_parquet(embeddings_dir, index=False)
 
 print("finished, embeddings saved to parquet file")
