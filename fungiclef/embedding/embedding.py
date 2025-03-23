@@ -31,7 +31,7 @@ def extract_embeddings(image_paths, batch_size=8):
         batch_paths = image_paths[i : i + batch_size]
         print("Loading Images")
         batch_images = [cv2.imread(img_path)[:, :, ::-1] for img_path in batch_paths]
-
+        print("Finish Loading Images")
         model_inputs = processor(images=batch_images, return_tensors="pt")
 
         # Move inputs to GPU if available

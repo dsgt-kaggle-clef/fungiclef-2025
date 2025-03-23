@@ -8,6 +8,7 @@ from sklearn.cluster import KMeans
 # generating a smaller subset for
 seed = 2025
 
+
 # Load embeddings from parquet file
 embeddings_path = os.path.join(
     os.environ["HOME"],

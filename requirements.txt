@@ -10,6 +10,8 @@ torch
 transformers
 opencv-python
 ipywidgets
+numba
+pacmap
 #add all the dependencies
 
 
