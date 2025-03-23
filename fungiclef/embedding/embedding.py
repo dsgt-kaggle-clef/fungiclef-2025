@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 
 ### This assume the images are saved in scratch/fungiclef/dataset
+### extract embeddings from the images using DINO into a Pandas Dataframe and saves as parquet files
 
 print("finish import")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -20,13 +21,6 @@ print("finished setting model to eval")
 
 for param in model.parameters():
     param.requires_grad = False
-
-
-# def preprocess_image_cv2(image_path):
-#     image = cv2.imread(image_path)
-#     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-#     image = cv2.resize(image, (224, 224))
-#     return image
 
 
 def extract_embeddings(image_paths, batch_size=8):
@@ -57,20 +51,66 @@ def extract_embeddings(image_paths, batch_size=8):
     return np.array(embeddings), image_names
 
 
-image_dir = os.path.join(
-    os.environ["HOME"],
-    "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/720p",
-)
-image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
-batch_size = 256
-embeddings, image_names = extract_embeddings(image_files, batch_size=batch_size)
+def train_embeddings():
+    image_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/720p",
+    )
+    image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
+    batch_size = 256
+    embeddings, image_names = extract_embeddings(image_files, batch_size=batch_size)
 
-df_embeddings = pd.DataFrame(embeddings)
-df_embeddings.insert(0, "filename", image_names)
-embeddings_dir = os.path.join(
-    os.environ["HOME"],
-    "scratch/fungiclef/embeddings/720p_fungi_train_embeddings.parquet",
-)
-df_embeddings.to_parquet(embeddings_dir, index=False)
+    df_embeddings = pd.DataFrame(embeddings)
+    df_embeddings.insert(0, "filename", image_names)
+    embeddings_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/embeddings/720p_fungi_train_embeddings.parquet",
+    )
+    df_embeddings.to_parquet(embeddings_dir, index=False)
 
-print("finished, embeddings saved to parquet file")
+    print("finished, training embeddings saved to parquet file")
+
+
+def val_embeddings():
+    image_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p",
+    )
+    image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
+    batch_size = 256
+    embeddings, image_names = extract_embeddings(image_files, batch_size=batch_size)
+
+    df_embeddings = pd.DataFrame(embeddings)
+    df_embeddings.insert(0, "filename", image_names)
+    embeddings_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/embeddings/720p_fungi_val_embeddings.parquet",
+    )
+    df_embeddings.to_parquet(embeddings_dir, index=False)
+
+    print("finished, validation embeddings saved to parquet file")
+
+
+def test_embeddings():
+    image_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/test/720p",
+    )
+    image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
+    batch_size = 256
+    embeddings, image_names = extract_embeddings(image_files, batch_size=batch_size)
+
+    df_embeddings = pd.DataFrame(embeddings)
+    df_embeddings.insert(0, "filename", image_names)
+    embeddings_dir = os.path.join(
+        os.environ["HOME"],
+        "scratch/fungiclef/embeddings/720p_fungi_test_embeddings.parquet",
+    )
+    df_embeddings.to_parquet(embeddings_dir, index=False)
+
+    print("finished, testing embeddings saved to parquet file")
+
+
+train_embeddings()
+val_embeddings()
+test_embeddings()
