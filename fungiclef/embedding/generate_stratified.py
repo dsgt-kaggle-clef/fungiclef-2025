@@ -4,30 +4,15 @@ import os
 import math
 from sklearn.cluster import KMeans
 
+IMAGE_SIZE = "fullsize"
+
 # https://www.geeksforgeeks.org/how-to-implement-stratified-sampling-with-scikit-learn/
-# generating a smaller subset for
-seed = 2025
+# Generates a stratified sample for training and validation dataset
 
 
-# Load embeddings from parquet file
-embeddings_path = os.path.join(
-    os.environ["HOME"],
-    "scratch/fungiclef/embeddings/720p_fungi_train_embeddings.parquet",
-)
-df_embeddings = pd.read_parquet(embeddings_path)
-
-# Load metadata file with category_id and poisonous classification
-metadata_path = os.path.join(
-    os.environ["HOME"],
-    "scratch/fungiclef/dataset/metadata/FungiTastic-FewShot/FungiTastic-FewShot-Train.csv",
-)
-metadata = pd.read_csv(metadata_path)
-
-merged_df = pd.merge(df_embeddings, metadata, on="filename", how="inner")
-
-
-# Think about adding code to account for rare species
-def generate_stratified_sample(df, n_species=10, rare_species_proportion=0.2):
+def generate_stratified_sample(
+    df, dataset_name, n_species=10, rare_species_proportion=0.2
+):
     """
     Generate a stratified sample of species based on visual similarity and poisonous classification
 
@@ -234,21 +219,13 @@ def generate_stratified_sample(df, n_species=10, rare_species_proportion=0.2):
     # Convert indices back to species IDs
     selected_species = [species_list[i] for i in selected_indices]
 
-    merged_embeddings_dir = os.path.join(
-        os.environ["HOME"],
-        "scratch/fungiclef/embeddings/merged_720p_fungi_train_embeddings.parquet",
-    )
-
-    # Save the merged DataFrame to a parquet file
-    merged_df.to_parquet(merged_embeddings_dir, index=False)
-
     stratified_embeddings_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/embeddings/stratified_720p_fungi_train_embeddings.parquet",
+        f"scratch/fungiclef/embeddings/stratified/stratified_{IMAGE_SIZE}_fungi_{dataset_name}_embeddings.parquet",
     )
 
     # Create a DataFrame with just the stratified sample
-    stratified_df = merged_df[merged_df["category_id"].isin(selected_species)]
+    stratified_df = df[df["category_id"].isin(selected_species)]
 
     # Save the stratified DataFrame to a parquet file
     stratified_df.to_parquet(stratified_embeddings_dir, index=False)
@@ -256,7 +233,16 @@ def generate_stratified_sample(df, n_species=10, rare_species_proportion=0.2):
     return selected_species
 
 
-selected_species = generate_stratified_sample(
-    merged_df, n_species=10, rare_species_proportion=0.2
-)  # using 20%, 20% is the number stated in the Motivation of the Kaggle dataset
-print(selected_species)
+names = ["train", "val"]
+for name in names:
+    # Load embeddings from parquet file
+    df_path = os.path.join(
+        os.environ["HOME"],
+        f"scratch/fungiclef/embeddings/images_with_metadata/merged_{IMAGE_SIZE}_fungi_{name}_embeddings.parquet",
+    )
+    df = pd.read_parquet(df_path)
+
+    selected_species = generate_stratified_sample(
+        df, name, n_species=10, rare_species_proportion=0.2
+    )  # using 20% for rare species proportion, 20% is the number stated in the Motivation of the Kaggle dataset
+    print(selected_species)

@@ -10,20 +10,9 @@ from tqdm import tqdm
 ### This assume the images are saved in scratch/fungiclef/dataset
 ### extract embeddings from the images using DINO into a Pandas Dataframe and saves as parquet files
 
-print("finish import")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_name = "facebook/dinov2-base"
-print("defining processor")
-model = AutoModel.from_pretrained(model_name).to(device)
-processor = AutoImageProcessor.from_pretrained(model_name)
-model.eval()
-print("finished setting model to eval")
-
-for param in model.parameters():
-    param.requires_grad = False
-
 
 def extract_embeddings(image_paths, batch_size=8):
+    """Function to generate embeddings for the images"""
     embeddings = []
     image_names = []
 
@@ -51,10 +40,10 @@ def extract_embeddings(image_paths, batch_size=8):
     return np.array(embeddings), image_names
 
 
-def train_embeddings():
+def train_embeddings(image_size):
     image_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/720p",
+        f"scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/{image_size}",
     )
     image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
     batch_size = 256
@@ -64,17 +53,17 @@ def train_embeddings():
     df_embeddings.insert(0, "filename", image_names)
     embeddings_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/embeddings/720p_fungi_train_embeddings.parquet",
+        f"scratch/fungiclef/embeddings/images_only/{image_size}_fungi_train_embeddings.parquet",
     )
     df_embeddings.to_parquet(embeddings_dir, index=False)
 
     print("finished, training embeddings saved to parquet file")
 
 
-def val_embeddings():
+def val_embeddings(image_size):
     image_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p",
+        f"scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/{image_size}",
     )
     image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
     batch_size = 256
@@ -84,17 +73,17 @@ def val_embeddings():
     df_embeddings.insert(0, "filename", image_names)
     embeddings_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/embeddings/720p_fungi_val_embeddings.parquet",
+        f"scratch/fungiclef/embeddings/images_only/{image_size}_fungi_val_embeddings.parquet",
     )
     df_embeddings.to_parquet(embeddings_dir, index=False)
 
     print("finished, validation embeddings saved to parquet file")
 
 
-def test_embeddings():
+def test_embeddings(image_size):
     image_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/dataset/images/FungiTastic-FewShot/test/720p",
+        f"scratch/fungiclef/dataset/images/FungiTastic-FewShot/test/{image_size}",
     )
     image_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir)]
     batch_size = 256
@@ -104,13 +93,26 @@ def test_embeddings():
     df_embeddings.insert(0, "filename", image_names)
     embeddings_dir = os.path.join(
         os.environ["HOME"],
-        "scratch/fungiclef/embeddings/720p_fungi_test_embeddings.parquet",
+        f"scratch/fungiclef/embeddings/images_only/{image_size}_fungi_test_embeddings.parquet",
     )
     df_embeddings.to_parquet(embeddings_dir, index=False)
 
     print("finished, testing embeddings saved to parquet file")
 
 
-train_embeddings()
-val_embeddings()
-test_embeddings()
+print("finish import")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model_name = "facebook/dinov2-base"
+print("defining processor")
+model = AutoModel.from_pretrained(model_name).to(device)
+processor = AutoImageProcessor.from_pretrained(model_name)
+model.eval()
+print("finished setting model to eval")
+
+for param in model.parameters():
+    param.requires_grad = False
+
+image_size = "fullsize"
+train_embeddings(image_size)
+val_embeddings(image_size)
+test_embeddings(image_size)
