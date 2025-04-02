@@ -6,14 +6,14 @@ import pacmap
 # Load embeddings from parquet file
 embeddings_path = os.path.join(
     os.environ["HOME"],
-    "scratch/fungiclef/embeddings/720p_fungi_train_embeddings.parquet",
+    "scratch/fungiclef/embeddings/images_only/fullsize_fungi_train_embeddings.parquet",
 )
 df = pd.read_parquet(embeddings_path)
 
 # Separate embeddings and labels
 image_names = df["filename"].values
 embeddings = df.drop(columns=["filename"]).values
-# embeddings are normalized from embedding.py
+# embeddings were normalized from embedding.py
 
 # Apply PaCMAP for dimensionality reduction to 2D
 print("Applying PaCMAP...")
