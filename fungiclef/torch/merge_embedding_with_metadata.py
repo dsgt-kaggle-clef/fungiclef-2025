@@ -35,6 +35,11 @@ def merge_embedding_metadata(dataset):
     merged_df.to_parquet(merged_embeddings_dir, index=False)
 
 
-names = ["train", "val", "test"]
-for name in names:
-    merge_embedding_metadata(name)
+def main():
+    names = ["train", "val", "test"]
+    for name in names:
+        merge_embedding_metadata(name)
+
+
+if __name__ == "__main__":
+    main()

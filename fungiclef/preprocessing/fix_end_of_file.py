@@ -70,23 +70,28 @@ def detect_and_fix(img_path, img_name):
         )
 
 
-dir_paths = create_paths()
-# dir_paths = [os.path.join(
-#     os.environ["HOME"],
-#     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/images_need_fixing",
-# )]
-for dir_path in dir_paths:
-    print(f"We are working with this dataset: {dir_path}")
-    for path in os.listdir(dir_path):
-        # Make sure to change the extension if it is nor 'jpg' ( for example 'JPG','PNG' etc..)
-        if path.endswith(".JPG"):
-            img_path = os.path.join(dir_path, path)
-            if (
-                img_path
-                == "/storage/home/hcoda1/5/jtam30/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG"
-            ):
-                pass
-            else:
-                detect_and_fix(img_path=img_path, img_name=path)
+def main():
+    dir_paths = create_paths()
+    # dir_paths = [os.path.join(
+    #     os.environ["HOME"],
+    #     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/images_need_fixing",
+    # )]
+    for dir_path in dir_paths:
+        print(f"We are working with this dataset: {dir_path}")
+        for path in os.listdir(dir_path):
+            # Make sure to change the extension if it is nor 'jpg' ( for example 'JPG','PNG' etc..)
+            if path.endswith(".JPG"):
+                img_path = os.path.join(dir_path, path)
+                if (
+                    img_path
+                    == "/storage/home/hcoda1/5/jtam30/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG"
+                ):
+                    pass
+                else:
+                    detect_and_fix(img_path=img_path, img_name=path)
 
-print("Process Finished")
+    print("Process Finished")
+
+
+if __name__ == "__main__":
+    main()

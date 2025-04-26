@@ -11,7 +11,7 @@ from tqdm import tqdm
 ### extract embeddings from the images using DINO into a Pandas Dataframe and saves as parquet files
 
 
-def extract_embeddings(image_paths, batch_size=8):
+def extract_embeddings(image_paths, model, processor, device, batch_size=8):
     """Function to generate embeddings for the images"""
     embeddings = []
     image_names = []
@@ -100,19 +100,20 @@ def test_embeddings(image_size):
     print("finished, testing embeddings saved to parquet file")
 
 
-print("finish import")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_name = "facebook/dinov2-base"
-print("defining processor")
-model = AutoModel.from_pretrained(model_name).to(device)
-processor = AutoImageProcessor.from_pretrained(model_name)
-model.eval()
-print("finished setting model to eval")
+if __name__ == "__main__":
+    print("finish import")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_name = "facebook/dinov2-base"
+    print("defining processor")
+    model = AutoModel.from_pretrained(model_name).to(device)
+    processor = AutoImageProcessor.from_pretrained(model_name)
+    model.eval()
+    print("finished setting model to eval")
 
-for param in model.parameters():
-    param.requires_grad = False
+    for param in model.parameters():
+        param.requires_grad = False
 
-image_size = "fullsize"
-train_embeddings(image_size)
-val_embeddings(image_size)
-test_embeddings(image_size)
+    image_size = "fullsize"
+    train_embeddings(image_size)
+    val_embeddings(image_size)
+    test_embeddings(image_size)

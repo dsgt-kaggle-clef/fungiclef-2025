@@ -5,6 +5,10 @@ scikit-learn
 tqdm
 pyspark >= 3.4.0
 pyarrow
+torch
+torchvision
+pytorch-lightning
+lightning
 luigi
 torch
 transformers
