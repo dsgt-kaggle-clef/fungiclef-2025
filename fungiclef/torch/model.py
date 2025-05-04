@@ -1,18 +1,14 @@
 import torch
 import pytorch_lightning as pl
 import torch.nn as nn
-
-
-from transformers import AutoImageProcessor, AutoModel
 from fungiclef.config import get_device, get_class_mappings_file
 
 
 class DINOv2LightningModel(pl.LightningModule):
-    """PyTorch Lightning module for extracting embeddings from a fine-tuned DINOv2 model."""
+    """PyTorch Lightning module for training a classifier on pre-extracted embeddings from parquet files."""
 
     def __init__(
         self,
-        model_name="facebook/dinov2-base",
         top_k: int = 10,
     ):
         super().__init__()
@@ -21,85 +17,61 @@ class DINOv2LightningModel(pl.LightningModule):
         self.top_k = top_k
         self.learning_rate = 1e-3
 
-        # Load model
-        self.model = AutoModel.from_pretrained(model_name)
-        # move model to device
-        self.model.to(self.model_device)
-        self.model.eval()
-
-        # Freeze backbone
-        for param in self.model.parameters():
-            param.requires_grad = False
-
-        # Load transform for image preprocessing
-        self.transform = AutoImageProcessor.from_pretrained(model_name)
-
-        emb_dim = self._get_embedding_dim()
-
-        if emb_dim != 768:
-            print(f"embed_dim is {emb_dim}, expected 768")
+        # emb_dim = self._get_embedding_dim()
+        self.emb_dim = 768
 
         # Trainable Logistic Regression head
-        self.classifier = nn.Linear(emb_dim, self.num_classes)
+        self.classifier = nn.Linear(self.emb_dim, self.num_classes)
 
         # class mappings file for classification
         self.class_mappings_file = get_class_mappings_file()
         # load class mappings
         self.cid_to_spid = self._load_class_mappings()
 
-    def _get_embedding_dim(self):
-        # Dynamically determine embedding size, should be 768
-        dummy_input = torch.randn(1, 3, 224, 224)
-        dummy_processed = self.transform(images=dummy_input, return_tensors="pt")
-        with torch.no_grad():
-            dummy_output = self.model(**dummy_processed)
-            return dummy_output.last_hidden_state[:, 0, :].shape[-1]
-
     def _load_class_mappings(self):
         with open(self.class_mappings_file, "r") as f:
             class_index_to_class_name = {i: line.strip() for i, line in enumerate(f)}
         return class_index_to_class_name
 
-    def forward(self, batch):
+    def forward(self, embeddings):
         """Extract embeddings using the [CLS] token."""
-        with torch.no_grad():
-            batch = batch.to(self.model_device)  # move to device
-            outputs = self.model(batch)
-            embeddings = outputs.last_hidden_state[:, 0, :]  # extract [CLS] token
-            # forward pass
-            logits = self.classifier(embeddings)
-
-        return embeddings, logits
-
-    def extract_embeddings(self, batch):
-        """Returns the [CLS] token embeddings"""
-        batch = batch.to(self.model_device)
-        with torch.no_grad():
-            outputs = self.model(batch)
-            embeddings = outputs.last_hidden_state[:, 0, :]
-        return embeddings
+        embeddings = embeddings.to(self.model_device)
+        # forward pass
+        logits = self.classifier(embeddings)
+        return logits
 
     def training_step(self, batch, batch_idx):
-        images, labels = batch
-        embeddings, logits = self(images)
+        embeddings, labels = batch
+        embeddings = embeddings.to(self.model_device)
+        labels = labels.to(self.model_device)
+        # Forward pass
+        logits = self(embeddings)
         loss = nn.functional.cross_entropy(logits, labels)
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        images, labels = batch
-        embeddings, logits = self(images)
+        embeddings, labels = batch
+        # Move data to gpu if available
+        embeddings = embeddings.to(self.model_device)
+        labels = labels.to(self.model_device)
+        # Forward pass
+        logits = self(embeddings)
         loss = nn.functional.cross_entropy(logits, labels)
         acc = (logits.argmax(dim=1) == labels).float().mean()
         self.log("val_loss", loss, prog_bar=True)
         self.log("val_acc", acc, prog_bar=True)
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.classifier.parameters(), lr=self.learning_rate)
-
     def predict_step(self, batch, batch_idx):
         """Runs inference on batch and returns embeddings and top-K logits."""
-        embeddings, logits = self(batch)
+        if isinstance(batch, tuple) and len(batch) == 2:
+            embeddings, _ = batch  # Ignore labels if present
+        else:
+            embeddings = batch  # Use just embeddings if no labels
+        # Move data to gpu if available
+        embeddings = embeddings.to(self.model_device)
+
+        logits = self(embeddings)
         probabilities = torch.softmax(logits, dim=1)
         top_probs, top_indices = torch.topk(probabilities, k=self.top_k, dim=1)
 
@@ -115,6 +87,9 @@ class DINOv2LightningModel(pl.LightningModule):
             batch_logits.append(species_probs)
 
         return embeddings, batch_logits
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
 
 if __name__ == "__main__":

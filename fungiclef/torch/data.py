@@ -1,21 +1,17 @@
 import pytorch_lightning as pl
-
+import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import ToTensor
-from fungiclef.serde import deserialize_image
-from fungiclef.torch.model import DINOv2LightningModel
 
 
 class FungiDataset(Dataset):
-    """Custom PyTorch Dataset for loading fungi images from a Pandas DataFrame."""
+    """Custom PyTorch Dataset for loading embeddings from parquet files."""
 
     def __init__(
         self,
         df,
-        transform=None,
-        col_name: str = "data",
-        label_col: str = "category_id",
-        training_mode: bool = False,
+        embedding_col: str = "embedding",
+        label_col: str = None,
+        has_labels: bool = True,
     ):
         """
         Args:
@@ -26,29 +22,21 @@ class FungiDataset(Dataset):
             training_mode (bool): If True, return image-label pairs for training.
         """
         self.df = df
-        self.transform = transform
-        self.col_name = col_name
+        self.embedding_col = embedding_col
         self.label_col = label_col
-        self.training_mode = training_mode
+        self.has_labels = has_labels
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-        """returns torch tensor"""
-        img_bytes = self.df.iloc[idx][self.col_name]  # column with image bytes
-        img = deserialize_image(img_bytes)  # convert from bytes to PIL image
-        # single image, shape: (C, H, W)
-        if self.transform:
-            processed = self.transform(images=img, return_tensors="pt")  # (B, C, H, W)
-            image_tensor = processed["pixel_values"].squeeze(0)  # (C, H, W)
-        else:
-            image_tensor = ToTensor()(img)  # (C, H, W)
-
-        if self.training_mode and self.label_col in self.df.columns:
+        """Return embedding-label pair or just embedding if no labels."""
+        embedding_data = self.df.iloc[idx][self.embedding_col]
+        embedding_tensor = torch.from_numpy(embedding_data.copy()).float()
+        if self.has_labels:
             label = self.df.iloc[idx][self.label_col]
-            return image_tensor, label
-        return image_tensor
+            return embedding_tensor, label
+        return embedding_tensor
 
 
 class FungiDataModule(pl.LightningDataModule):
@@ -59,8 +47,10 @@ class FungiDataModule(pl.LightningDataModule):
         train_df,
         val_df,
         test_df,
-        batch_size=32,
-        num_workers=4,
+        batch_size=64,
+        num_workers=6,
+        embedding_col="embedding",
+        label_col="category_id",
     ):
         super().__init__()
         self.train_df = train_df
@@ -68,25 +58,38 @@ class FungiDataModule(pl.LightningDataModule):
         self.test_df = test_df
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.model = None
+        self.embedding_col = embedding_col
+        self.label_col = label_col
+        # Check if test data has labels
+        self.test_has_labels = test_df is not None and label_col in test_df.columns
 
     def setup(self, stage=None):
-        """Set up dataset and transformations."""
-
-        if self.model is None:
-            self.model = DINOv2LightningModel()
+        """Set up dataset."""
 
         # Create datasets for each split
         if stage == "fit" or stage is None:
-            self.train_dataset = FungiDataset(self.train_df, self.model.transform)
-            self.val_dataset = FungiDataset(self.val_df, self.model.transform)
-
+            self.train_dataset = FungiDataset(
+                self.train_df, self.embedding_col, self.label_col, has_labels=True
+            )
+            self.val_dataset = FungiDataset(
+                self.val_df, self.embedding_col, self.label_col, has_labels=True
+            )
         if stage == "test" or stage is None:
-            self.test_dataset = FungiDataset(self.test_df, self.model.transform)
+            self.test_dataset = FungiDataset(
+                self.test_df,
+                self.embedding_col,
+                self.label_col,
+                has_labels=self.test_has_labels,
+            )
 
         if stage == "predict" or stage is None:
             # For prediction, typically use the test dataset
-            self.predict_dataset = FungiDataset(self.test_df, self.model.transform)
+            self.predict_dataset = FungiDataset(
+                self.test_df,
+                self.embedding_col,
+                self.label_col,
+                has_labels=self.test_has_labels,
+            )
 
     def predict_dataloader(self):
         """Returns DataLoader for inference."""

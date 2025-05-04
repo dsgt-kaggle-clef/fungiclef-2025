@@ -16,6 +16,7 @@ opencv-python
 ipywidgets
 numba
 pacmap
+tensorboard
 #add all the dependencies
 
 
