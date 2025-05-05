@@ -166,3 +166,4 @@ cython_debug/
 *.jpg
 *.csv
 *.pth
+*data
