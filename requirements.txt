@@ -5,11 +5,19 @@ scikit-learn
 tqdm
 pyspark >= 3.4.0
 pyarrow
+torch
+torchvision
+pytorch-lightning
+lightning
 luigi
 torch
 transformers
 opencv-python
 ipywidgets
+numba
+pacmap
+tensorboard
+timm
 #add all the dependencies
 
 
