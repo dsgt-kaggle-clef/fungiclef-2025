@@ -7,7 +7,9 @@ from tqdm import tqdm
 from fungiclef.torch.data import FungiDataModule
 from fungiclef.torch.model import DINOv2LightningModel
 
-### example usage: python clef/fungiclef-2025/fungiclef/prediction/predict.py --test scratch/fungiclef/embeddings/test_embeddings.parquet --model scratch/fungiclef/model/base_model/base_fungi-classifier-epoch=05-val_loss=5.17.ckpt --output clef/fungiclef-2025/fungiclef/prediction/base_predictions.csv
+### example usage: python clef/fungiclef-2025/fungiclef/prediction/predict.py --test scratch/fungiclef/embeddings/dinov2/test_embeddings.parquet --model scratch/fungiclef/model/base_model/base_fungi-classifier-epoch=05-val_loss=5.17.ckpt --output clef/fungiclef-2025/fungiclef/prediction/base_predictions.csv
+
+### example usage: python clef/fungiclef-2025/fungiclef/prediction/predict.py --test scratch/fungiclef/embeddings/plantclef/test_embeddings.parquet --model scratch/fungiclef/model/plantclef/plantclef_fungi-classifier-epoch=04-val_loss=5.16.ckpt --output clef/fungiclef-2025/fungiclef/prediction/plantclef_predictions.csv
 
 
 def generate_predictions(

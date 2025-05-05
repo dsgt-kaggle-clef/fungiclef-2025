@@ -5,7 +5,9 @@ import numpy as np
 import argparse
 from pathlib import Path
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/validate_embeddings.py --input scratch/fungiclef/embeddings/train_embeddings.parquet
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/validate_embeddings.py --input scratch/fungiclef/embeddings/dinov2/train_embeddings.parquet
+
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/validate_embeddings.py --input scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet
 
 
 def validate_embeddings(parquet_path: str):

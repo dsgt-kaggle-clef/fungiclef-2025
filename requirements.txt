@@ -17,6 +17,7 @@ ipywidgets
 numba
 pacmap
 tensorboard
+timm
 #add all the dependencies
 
 
