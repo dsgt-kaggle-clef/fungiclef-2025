@@ -40,7 +40,7 @@ python clef/fungiclef-2025/fungiclef/preprocessing/class_mapping.py --metadata s
 ```
 
 ## Obtain Embeddings
-One set of example commands for DinoV2-base model, another set of commands for vit timm model
+One set of example commands for DinoV2-base model, another set of commands for vit timm model (plantclef model)
 
 DinoV2
 ```bash
@@ -69,11 +69,25 @@ python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/
 ```
 
 ## Train the Model
+One set of example commands for DinoV2-base model, another set of commands for vit timm model
+
+DinoV2
 ```bash
 python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/dinov2/train_embeddings.parquet --val scratch/fungiclef/embeddings/dinov2/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/base_model --learning-rate 1e-3
 ```
+ViT from timm
+```bash
+python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --val scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/plantclef --learning-rate 1e-3
+```
 
 ## Generate Predictions
+One set of example commands for DinoV2-base model, another set of commands for vit timm model
+
+DinoV2
 ```bash
 python clef/fungiclef-2025/fungiclef/prediction/predict.py --test scratch/fungiclef/embeddings/dinov2/test_embeddings.parquet --model scratch/fungiclef/model/base_model/base_fungi-classifier-epoch=05-val_loss=5.17.ckpt --output clef/fungiclef-2025/fungiclef/prediction/base_predictions.csv
+```
+ViT from timm
+```bash
+python clef/fungiclef-2025/fungiclef/prediction/predict.py --test scratch/fungiclef/embeddings/plantclef/test_embeddings.parquet --model scratch/fungiclef/model/plantclef/plantclef_fungi-classifier-epoch=04-val_loss=5.16.ckpt --output clef/fungiclef-2025/fungiclef/prediction/plantclef_predictions.csv
 ```
