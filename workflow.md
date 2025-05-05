@@ -36,7 +36,7 @@ rm -rf temp_fungi
 ### Fix end of file errors in images
 Pillow/OpenCV has issues opening some images straight from kaggle due to missing end of file marker.
 ```bash
-python clef/fungiclef-2025/fungiclef/preprocessing/fix_end_of_file.py 
+python fix_image_endings.py --base-dir /scratch/fungiclef/dataset/images/FungiTastic-FewShot
 ```
 
 ### Serialize Images

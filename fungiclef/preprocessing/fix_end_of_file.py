@@ -8,41 +8,20 @@ produce errors during DL training or other tasks.
 ,using a notepad, that the image's hex finishes with D9 after the script has finished.
 """
 
-import os
 import cv2
+from pathlib import Path
+import argparse
 
-# Directory to search for images
-# dir_path = r'/home/...'
-# train_path1 = os.path.join(
-#     os.environ["HOME"],
-#     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/300p",
-# )
-# train_path2 = os.path.join(
-#     os.environ["HOME"],
-#     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/500p",
-# )
-# train_path3 = os.path.join(
-#     os.environ["HOME"],
-#     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/720p",
-# )
-# train_path4 = os.path.join(
-#     os.environ["HOME"],
-#     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/train/fullsize",
-# )
+### example usage python fix_image_endings.py --base-dir /scratch/fungiclef/dataset/images/FungiTastic-FewShot
 
-# # dir_paths = [train_path1, train_path2, train_path3, train_path4]
-
-
-def create_paths():
+def create_paths(base_dir):
     dir_paths = []
     image_size = ["300p", "500p", "720p", "fullsize"]
     datasets = ["train", "val", "test"]
+    base_dir = Path(base_dir)
     for dataset in datasets:
         for size in image_size:
-            path = os.path.join(
-                os.environ["HOME"],
-                f"scratch/fungiclef/dataset/images/FungiTastic-FewShot/{dataset}/{size}",
-            )
+            path = base_dir / dataset / size
             dir_paths.append(path)
     return dir_paths
 
@@ -71,24 +50,28 @@ def detect_and_fix(img_path, img_name):
 
 
 def main():
-    dir_paths = create_paths()
     # dir_paths = [os.path.join(
     #     os.environ["HOME"],
     #     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/images_need_fixing",
     # )]
+    parser = argparse.ArgumentParser(description='Fix premature ending in JPG images')
+    parser.add_argument('--base-dir', type=str, required=True,
+                        help='directory containing the dataset (e.g., /scratch/fungiclef/dataset/images/FungiTastic-FewShot)')
+    
+    args = parser.parse_args()    
+    dir_paths = create_paths(args.base_dir)
+
+    # skip images to fix, this file is straight up corrupted. No images in the fullsize directories need to be skipped.
+    skip_path = Path("/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG")
+
     for dir_path in dir_paths:
         print(f"We are working with this dataset: {dir_path}")
-        for path in os.listdir(dir_path):
-            # Make sure to change the extension if it is nor 'jpg' ( for example 'JPG','PNG' etc..)
-            if path.endswith(".JPG"):
-                img_path = os.path.join(dir_path, path)
-                if (
-                    img_path
-                    == "/storage/home/hcoda1/5/jtam30/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG"
-                ):
-                    pass
-                else:
-                    detect_and_fix(img_path=img_path, img_name=path)
+        for img_file in dir_path.glob("*.JPG"):
+            # Make sure to change the extension if it is not 'JPG' ( for example 'jpg','PNG' etc..)
+            if img_file == skip_path:
+                pass
+            else:
+                detect_and_fix(img_path=str(img_file), img_name=img_file.name)
 
     print("Process Finished")
 
