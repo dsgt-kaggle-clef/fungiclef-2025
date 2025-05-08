@@ -11,8 +11,8 @@ produce errors during DL training or other tasks.
 import cv2
 from pathlib import Path
 import argparse
-
 ### example usage python fix_image_endings.py --base-dir /scratch/fungiclef/dataset/images/FungiTastic-FewShot
+
 
 def create_paths(base_dir):
     dir_paths = []
@@ -54,26 +54,68 @@ def main():
     #     os.environ["HOME"],
     #     "scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/images_need_fixing",
     # )]
-    parser = argparse.ArgumentParser(description='Fix premature ending in JPG images')
-    parser.add_argument('--base-dir', type=str, required=True,
-                        help='directory containing the dataset (e.g., /scratch/fungiclef/dataset/images/FungiTastic-FewShot)')
-    
-    args = parser.parse_args()    
+    parser = argparse.ArgumentParser(description="Fix premature ending in JPG images")
+    parser.add_argument(
+        "--base-dir",
+        type=str,
+        required=True,
+        help="directory containing the dataset (e.g., /scratch/fungiclef/dataset/images/FungiTastic-FewShot)",
+    )
+
+    args = parser.parse_args()
     dir_paths = create_paths(args.base_dir)
 
     # skip images to fix, this file is straight up corrupted. No images in the fullsize directories need to be skipped.
-    skip_path = Path("/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG")
+    skip_path = Path(
+        "/scratch/fungiclef/dataset/images/FungiTastic-FewShot/val/720p/3-4100094035.JPG"
+    )
 
     for dir_path in dir_paths:
         print(f"We are working with this dataset: {dir_path}")
+
         for img_file in dir_path.glob("*.JPG"):
+            result = extract_path_from_scratch(img_file)
+            # print(result)
+            result = Path(result)
             # Make sure to change the extension if it is not 'JPG' ( for example 'jpg','PNG' etc..)
-            if img_file == skip_path:
+            if result == skip_path:
+                # print(result)
                 pass
             else:
                 detect_and_fix(img_path=str(img_file), img_name=img_file.name)
 
     print("Process Finished")
+
+
+def extract_path_from_scratch(full_path):
+    """
+    Extract the portion of the path starting with '/scratch' or 'scratch'
+    regardless of what comes before it.
+
+    Args:
+        full_path (str): The full file path
+
+    Returns:
+        str: The path portion starting with '/scratch' or 'scratch'
+    """
+    # Convert to string if it's a Path object
+    if isinstance(full_path, Path):
+        full_path = str(full_path)
+
+    # Method 2: Split the path and look for 'scratch'
+    parts = full_path.split("/")
+    try:
+        # Find the index of 'scratch' in the path parts
+        for i, part in enumerate(parts):
+            if part == "scratch":
+                # Join from 'scratch' to the end with a leading slash
+                return "/" + "/".join(parts[i:])
+    except ValueError:
+        # 'scratch' not found in the path
+        pass
+
+    # If all methods fail, return the original
+    return full_path
 
 
 if __name__ == "__main__":

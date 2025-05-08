@@ -11,6 +11,7 @@ pytorch-lightning
 lightning
 luigi
 torch
+opencv-python
 transformers
 opencv-python
 ipywidgets
