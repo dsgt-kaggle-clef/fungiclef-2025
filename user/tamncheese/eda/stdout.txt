@@ -1,0 +1,151 @@
+Analyzing correlation with all available features:
+/home/jasonkhtam7/Documents/DSGT/clef/fungiclef-2025/user/tamncheese/eda/class_analyzer.py:334: SmallSampleWarning: One or more sample arguments is too small; all returned values will be NaN. See documentation for sample size requirements.
+  f_val, p_val = scipy.stats.f_oneway(*groups)
+/home/jasonkhtam7/Documents/DSGT/clef/fungiclef-2025/venv/lib/python3.12/site-packages/scipy/stats/_axis_nan_policy.py:586: ConstantInputWarning: Each of the input arrays is constant; the F statistic is not defined or infinite
+  res = hypotest_fun_out(*samples, **kwds)
+/home/jasonkhtam7/Documents/DSGT/clef/fungiclef-2025/user/tamncheese/eda/class_analyzer.py:334: SmallSampleWarning: One or more sample arguments is too small; all returned values will be NaN. See documentation for sample size requirements.
+  f_val, p_val = scipy.stats.f_oneway(*groups)
+
+=== Feature Correlation Summary ===
+Target column: category_id
+
+eventDate (categorical): SIGNIFICANT
+  Chi-square: 9042100.74, p-value: 0.000000
+
+year (numeric): SIGNIFICANT
+  F-value: 5.93, p-value: 0.000000
+
+month (numeric): SIGNIFICANT
+  F-value: 7.33, p-value: 0.000000
+
+day (numeric): SIGNIFICANT
+  F-value: 3.65, p-value: 0.000000
+
+habitat (categorical): SIGNIFICANT
+  Chi-square: 164680.81, p-value: 0.000000
+
+countryCode (categorical): SIGNIFICANT
+  Chi-square: 168501.63, p-value: 0.000000
+
+scientificName (categorical): SIGNIFICANT
+  Chi-square: 18968894.00, p-value: 0.000000
+
+kingdom (categorical): SIGNIFICANT
+  Chi-square: 15638.00, p-value: 0.000000
+
+phylum (categorical): SIGNIFICANT
+  Chi-square: 78190.00, p-value: 0.000000
+
+class (categorical): SIGNIFICANT
+  Chi-square: 241149.00, p-value: 0.000000
+
+order (categorical): SIGNIFICANT
+  Chi-square: 940986.00, p-value: 0.000000
+
+family (categorical): SIGNIFICANT
+  Chi-square: 2774409.00, p-value: 0.000000
+
+genus (categorical): SIGNIFICANT
+  Chi-square: 7920647.00, p-value: 0.000000
+
+specificEpithet (categorical): SIGNIFICANT
+  Chi-square: 16865583.00, p-value: 0.000000
+
+hasCoordinate (categorical): not significant
+  Chi-square: 0.00, p-value: 1.000000
+
+species (categorical): SIGNIFICANT
+  Chi-square: 18859428.00, p-value: 0.000000
+
+iucnRedListCategory (categorical): SIGNIFICANT
+  Chi-square: 31276.00, p-value: 0.000000
+
+substrate (categorical): SIGNIFICANT
+  Chi-square: 183986.08, p-value: 0.000000
+
+latitude (numeric): SIGNIFICANT
+  F-value: 55.77, p-value: 0.000000
+
+longitude (numeric): SIGNIFICANT
+  F-value: 53.63, p-value: 0.000000
+
+coorUncert (numeric): not significant
+  F-value: nan, p-value: nan
+
+observationID (numeric): SIGNIFICANT
+  F-value: 5.75, p-value: 0.000000
+
+region (categorical): SIGNIFICANT
+  Chi-square: 444057.08, p-value: 0.000000
+
+district (categorical): SIGNIFICANT
+  Chi-square: 1093587.16, p-value: 0.000000
+
+filename (categorical): not significant
+  Chi-square: 18968894.00, p-value: 0.346795
+
+metaSubstrate (categorical): SIGNIFICANT
+  Chi-square: 55457.72, p-value: 0.000000
+
+poisonous (numeric): SIGNIFICANT
+  F-value: inf, p-value: 0.000000
+
+elevation (numeric): not significant
+  F-value: nan, p-value: nan
+
+landcover (numeric): not significant
+  F-value: nan, p-value: nan
+
+biogeographicalRegion (categorical): SIGNIFICANT
+  Chi-square: 41214.75, p-value: 0.000000
+
+Significant features:
+  - eventDate
+  - year
+  - month
+  - day
+  - habitat
+  - countryCode
+  - scientificName
+  - kingdom
+  - phylum
+  - class
+  - order
+  - family
+  - genus
+  - specificEpithet
+  - species
+  - iucnRedListCategory
+  - substrate
+  - latitude
+  - longitude
+  - observationID
+  - region
+  - district
+  - metaSubstrate
+  - poisonous
+  - biogeographicalRegion
+
+=== Recommendations ===
+Imbalance severity: Severe
+Recommended approach: Combination of oversampling minority classes and undersampling majority classes
+Specific recommendation: Combined oversampling and undersampling
+
+Specific recommendations:
+1. Oversample rare classes aggressively with multiple augmentations per image
+2. Apply combinations of transformations (e.g., rotate AND flip) for maximum diversity
+3. Consider undersampling very common classes to prevent them from dominating
+4. Use cluster-based undersampling for majority classes to maintain diversity
+
+Special considerations:
+1. Taxonomic data present: Ensure augmentation respects taxonomic relationships. Images from the same genus/species should receive similar augmentation strategies.
+2. Binary feature 'poisonous' present: Analyze if this correlates with target classes. Ensure balancing doesn't create artificial correlations between poisonous status and classes.
+
+Recommendations for 10x expansion:
+1. For 10x expansion: First balance to reduce severe imbalance, then expand. Aim for no class to have less than 1/4 the samples of the most common class after augmentation, which may require aggressive augmentation of rare classes.
+
+Target distribution for 10.0x expansion (sqrt strategy):
+Original total: 7819 samples
+Target total: 77862 samples
+Actual expansion: 9.96x
+Plot saved to: /home/jasonkhtam7/Documents/DSGT/clef/fungiclef-2025/user/tamncheese/eda/

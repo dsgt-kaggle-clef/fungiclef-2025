@@ -13,17 +13,17 @@ from torch.utils.data import DataLoader, Dataset
 from plantclef_model_setup import setup_fine_tuned_model
 from fungiclef.config import get_device
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/train_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/train_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/val_serialized.parquet --output scratch/fungiclef/embeddings/val_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/test_serialized.parquet --output scratch/fungiclef/embeddings/test_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/test_serialized.parquet --output scratch/fungiclef/embeddings/test_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/val_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/val_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
 
-### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/test_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/test_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
+### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/test_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/test_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
 
 
 class SerializedImageDataset(Dataset):
@@ -64,6 +64,8 @@ def extract_embeddings(
     batch_size: int = 64,
     num_workers: int = 6,
     device: str = None,
+    augment: int = 1,
+    balance: bool = False,
 ):
     """
     Extract ViT embeddings from serialized images and save them.
@@ -206,6 +208,18 @@ def main():
         default=None,
         help="Device to use for inference (cuda, cpu, or None for auto)",
     )
+    parser.add_argument(
+        "--augment",
+        type=int,
+        default=1,
+        help="Integer to augment the dataset size by. 1 is no augmentation",
+    )
+    parser.add_argument(
+        "--balance",
+        type=bool,
+        default=False,
+        help="True or False to apply class balancing",
+    )
 
     args = parser.parse_args()
 
@@ -220,6 +234,8 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         device=args.device,
+        augment=args.augment,
+        balance=args.balance,
     )
 
 

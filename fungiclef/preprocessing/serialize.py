@@ -5,6 +5,7 @@ import pandas as pd
 import argparse
 from pathlib import Path
 from tqdm import tqdm
+from augment import augment_and_serialize
 
 # Import from your serde module
 from fungiclef.serde import read_image_bytes
@@ -21,6 +22,7 @@ def add_serialized_images_to_csv(
     image_dir: str,
     output_parquet: str,
     image_col: str = "filename",  # Column containing image filenames
+    scale_factor: int = 1,  # augmentation factor
 ):
     """
     Reads images from disk as raw bytes and adds them to a new column in the metadata and saves to Parquet.
@@ -40,29 +42,39 @@ def add_serialized_images_to_csv(
         )
 
     print(f"Processing {len(df)} images...")
-    # Create a new column to store image data
-    df["data"] = None
+    if scale_factor < 1:
+        raise ValueError("invalid augment factor")
+    elif scale_factor > 1:
+        augment_and_serialize(
+            csv_path,
+            image_dir=image_dir,
+            output_parquet=output_parquet,
+            scale_factor=scale_factor,
+        )
+    else:
+        # Create a new column to store image data
+        df["data"] = None
 
-    # Process each row
-    for idx, row in tqdm(df.iterrows(), total=len(df)):
-        img_filename = row[image_col]
-        img_path = os.path.join(image_dir, img_filename)
+        # Process each row
+        for idx, row in tqdm(df.iterrows(), total=len(df)):
+            img_filename = row[image_col]
+            img_path = os.path.join(image_dir, img_filename)
 
-        try:
-            # Read image bytes directly without re-encoding
-            img_bytes = read_image_bytes(img_path)
+            try:
+                # Read image bytes directly without re-encoding
+                img_bytes = read_image_bytes(img_path)
 
-            # Store the binary data
-            df.at[idx, "data"] = img_bytes
-        except Exception as e:
-            print(f"Error processing image {img_path}: {e}")
-            # Set a placeholder to avoid NaN values
-            df.at[idx, "data"] = b""
+                # Store the binary data
+                df.at[idx, "data"] = img_bytes
+            except Exception as e:
+                print(f"Error processing image {img_path}: {e}")
+                # Set a placeholder to avoid NaN values
+                df.at[idx, "data"] = b""
 
-    # Save the updated dataframe
-    print(f"Saving processed data to {output_parquet}")
-    df.to_parquet(output_parquet)
-    print("Done!")
+        # Save the updated dataframe
+        print(f"Saving processed data to {output_parquet}")
+        df.to_parquet(output_parquet)
+        print("Done!")
 
 
 def main():
@@ -83,6 +95,13 @@ def main():
         default="filename",
         help="Column name containing image filenames",
     )
+    parser.add_argument(
+        "--scale-factor",
+        type=int,
+        required=False,
+        default=1,
+        help="Integer to augment the dataset. 1 is 1x the dataset, no change",
+    )
 
     args = parser.parse_args()
 
@@ -95,6 +114,7 @@ def main():
         image_dir=args.image_dir,
         output_parquet=args.output,
         image_col=args.image_col,
+        scale_factor=args.scale_factor,
     )
 
 
