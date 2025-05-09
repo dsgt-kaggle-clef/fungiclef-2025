@@ -1,11 +1,43 @@
 [project]
-name = "fungiclef-2025"
+name = "fungiclef"
 version = "0.1.0"
-authors = [{ name = "Anthony Miyaguchi", email = "acmiyaguchi@gatech.edu" }, { name = "Jason Kahei Tam", email = "jtam30@gatech.edu"}]
+authors = [{ name = "Anthony Miyaguchi", email = "acmiyaguchi@gatech.edu" }, { name = "Jason Kahei Tam", email = "jtam30@gatech.edu"}, { name = "Murilo Gustineli", email = "murilogustineli@gatech.edu" }]
 description = "DS@GT CLEF 2025 package for FungiCLEF"
 readme = "README.md"
 requires-python = ">=3.8"
-dynamic = ["dependencies"]
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "scikit-learn",
+    "tqdm",
+    "pyspark >= 3.4.0",
+    "pyarrow",
+    "torch",
+    "torchvision",
+    "pytorch-lightning",
+    "lightning",
+    "luigi",
+    "torch",
+    "opencv-python",
+    "transformers",
+    "opencv-python",
+    "ipywidgets",
+    "numba",
+    "pacmap",
+    "tensorboard",
+    "timm",
+    "aria2>=0.0.1b0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyterlab",
+    "ruff",
+    "pre-commit",
+    "pytest",
+    "pace-job-monitoring@git+https://github.com/dsgt-kaggle-clef/pace-job-monitoring.git#main"
+]
 
 [project.urls]
 Homepage = "https://github.com/dsgt-kaggle-clef/fungiclef-2025"
