@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 import torch.nn as nn
-from fungiclef.config import get_device, get_class_mappings_file
+from fungiclef.config import get_device
 
 
 class DINOv2LightningModel(pl.LightningModule):
@@ -22,16 +22,6 @@ class DINOv2LightningModel(pl.LightningModule):
 
         # Trainable Logistic Regression head
         self.classifier = nn.Linear(self.emb_dim, self.num_classes)
-
-        # class mappings file for classification
-        self.class_mappings_file = get_class_mappings_file()
-        # load class mappings
-        self.cid_to_spid = self._load_class_mappings()
-
-    def _load_class_mappings(self):
-        with open(self.class_mappings_file, "r") as f:
-            class_index_to_class_name = {i: line.strip() for i, line in enumerate(f)}
-        return class_index_to_class_name
 
     def forward(self, embeddings):
         """Extract embeddings using the [CLS] token."""
@@ -73,20 +63,7 @@ class DINOv2LightningModel(pl.LightningModule):
 
         logits = self(embeddings)
         probabilities = torch.softmax(logits, dim=1)
-        top_probs, top_indices = torch.topk(probabilities, k=self.top_k, dim=1)
-
-        # map class indices to species names
-        batch_logits = []
-        for i in range(len(logits)):
-            species_probs = {
-                self.cid_to_spid.get(int(top_indices[i, j].item()), "Unknown"): float(
-                    top_probs[i, j].item()
-                )
-                for j in range(self.top_k)
-            }
-            batch_logits.append(species_probs)
-
-        return embeddings, batch_logits
+        return embeddings, probabilities
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)

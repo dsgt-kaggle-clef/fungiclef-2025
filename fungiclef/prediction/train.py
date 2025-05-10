@@ -1,4 +1,4 @@
-import argparse
+import typer
 import pandas as pd
 import pytorch_lightning as pl
 from pathlib import Path
@@ -14,9 +14,20 @@ from fungiclef.torch.model import DINOv2LightningModel
 ### example usage: python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --val scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/plantclef --learning-rate 1e-3
 
 
+def load_and_merge_embeddings(
+    parquet_path: str, embed_path: str, columns: list
+) -> pd.DataFrame:
+    """Load and merge metadata and embeddings"""
+    df_meta = pd.read_parquet(parquet_path, columns=columns)
+    df_embed = pd.read_parquet(embed_path)
+    return df_meta.merge(df_embed, on="filename", how="inner")
+
+
 def train_fungi_classifier(
-    train_parquet: str,
-    val_parquet: str,
+    train_parquet_path: str,
+    train_embed_path: str,
+    val_parquet_path: str,
+    val_embed_path: str,
     batch_size: int = 64,
     num_workers: int = 6,
     max_epochs: int = 10,
@@ -35,35 +46,37 @@ def train_fungi_classifier(
         learning_rate: Learning rate for optimizer
         output_dir: Directory to save model checkpoints
     """
-    # Load data
-    print(f"Loading data from {train_parquet}, {val_parquet}")
+    # get category ID
+    columns = [
+        "filename",
+        "category_id",
+        "species",
+        "genus",
+        "family",
+        "order",
+        "class",
+        "poisonous",
+    ]
+    # load data
+    train_df = load_and_merge_embeddings(train_parquet_path, train_embed_path, columns)
+    val_df = load_and_merge_embeddings(val_parquet_path, val_embed_path, columns)
 
-    train_df = pd.read_parquet(train_parquet)
-    val_df = pd.read_parquet(val_parquet)
-
-    # Check if category_id column exists
-    if "category_id" not in train_df.columns or "category_id" not in val_df.columns:
-        raise ValueError("Expected 'category_id' column in parquet files")
-
-    if "embedding" not in train_df.columns or "embedding" not in val_df.columns:
-        raise ValueError("Expected 'embedding' column in parquet files")
-
-    # Create data module
+    # create data module
     data_module = FungiDataModule(
         train_df=train_df,
         val_df=val_df,
         test_df=None,
         batch_size=batch_size,
         num_workers=num_workers,
-        embedding_col="embedding",
+        embedding_col="embeddings",
         label_col="category_id",
     )
 
-    # Create model
+    # create model
     model = DINOv2LightningModel()
     model.learning_rate = learning_rate  # Set learning rate
 
-    # Set up callbacks
+    # set up callbacks
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_dir,
         filename="fungi-classifier-{epoch:02d}-{val_loss:.2f}",
@@ -95,53 +108,32 @@ def train_fungi_classifier(
 
     print(f"Model saved to {checkpoint_callback.best_model_path}")
 
-    return model, checkpoint_callback.best_model_path
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Train a fungi classifier")
-    parser.add_argument(
-        "--train", type=str, required=True, help="Path to training data CSV"
-    )
-    parser.add_argument(
-        "--val", type=str, required=True, help="Path to validation data CSV"
-    )
-
-    parser.add_argument(
-        "--batch-size", type=int, default=64, help="Batch size for training"
-    )
-    parser.add_argument(
-        "--num-workers", type=int, default=6, help="Number of workers for data loading"
-    )
-    parser.add_argument(
-        "--max-epochs", type=int, default=10, help="Maximum number of training epochs"
-    )
-
-    parser.add_argument(
-        "--learning-rate", type=float, default=1e-3, help="Learning rate for optimizer"
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="models",
-        help="Directory to save model checkpoints",
-    )
-    args = parser.parse_args()
-
+def main(
+    train_parquet_path: str = typer.Argument(..., help="Path to training data parquet"),
+    train_embed_path: str = typer.Argument(..., help="Path to training data parquet"),
+    val_parquet_path: str = typer.Argument(..., help="Path to validation data parquet"),
+    val_embed_path: str = typer.Argument(..., help="Path to validation data parquet"),
+    cpu_count: int = typer.Option(6, help="Number of workers for data loading"),
+    batch_size: int = typer.Option(64, help="Batch size for training"),
+    max_epochs: int = typer.Option(10, help="Maximum number of training epochs"),
+    learning_rate: float = typer.Option(1e-3, help="Learning rate for optimizer"),
+    output_model_path: str = typer.Option(
+        "models", help="Directory to save model checkpoints"
+    ),
+):
     # Create output directory if it doesn't exist
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    Path(output_model_path).mkdir(parents=True, exist_ok=True)
 
     # Train model
     train_fungi_classifier(
-        train_parquet=args.train,
-        val_parquet=args.val,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        max_epochs=args.max_epochs,
-        learning_rate=args.learning_rate,
-        output_dir=args.output_dir,
+        train_parquet_path=train_parquet_path,
+        train_embed_path=train_embed_path,
+        val_parquet_path=val_parquet_path,
+        val_embed_path=val_embed_path,
+        num_workers=cpu_count,
+        batch_size=batch_size,
+        max_epochs=max_epochs,
+        learning_rate=learning_rate,
+        output_dir=output_model_path,
     )
-
-
-if __name__ == "__main__":
-    main()
