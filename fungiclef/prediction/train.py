@@ -79,7 +79,7 @@ def train_fungi_classifier(
     # set up callbacks
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_dir,
-        filename="fungi-classifier-{epoch:02d}-{val_loss:.2f}",
+        filename="plantclef-fungi-classifier-{epoch:02d}-{val_loss:.2f}",
         save_top_k=3,
         monitor="val_loss",
         mode="min",
