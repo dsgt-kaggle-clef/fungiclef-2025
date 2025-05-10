@@ -9,7 +9,7 @@ class FungiDataset(Dataset):
     def __init__(
         self,
         df,
-        embedding_col: str = "embedding",
+        embedding_col: str = "embeddings",
         label_col: str = None,
         has_labels: bool = True,
     ):
