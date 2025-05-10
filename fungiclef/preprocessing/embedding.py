@@ -15,11 +15,15 @@ from fungiclef.config import get_device
 
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/train_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
+# usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/train_augment_serialized.parquet --output scratch/fungiclef/embeddings/train_augment_embeddings_test.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
+
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/val_serialized.parquet --output scratch/fungiclef/embeddings/val_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/test_serialized.parquet --output scratch/fungiclef/embeddings/test_embeddings.parquet --model-name facebook/dinov2-base --batch-size 64 --num-workers 6
 
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/train_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
+
+# python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/dataset/processed/train_augment_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/train_augment_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
 
 ### example usage python clef/fungiclef-2025/fungiclef/preprocessing/embedding.py --input scratch/fungiclef/processed/val_serialized.parquet --output scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --num-workers 6 --model-name vit_base_patch14_reg4_dinov2.lvd142m
 
