@@ -58,6 +58,10 @@ def main(
     # run the pipeline
     embeddings = pl_trainer_pipeline(df, batch_size, cpu_count)
 
-    # save the embeddings to a parquet file
-    embeddings_df = pd.DataFrame(embeddings.numpy())
-    embeddings_df.to_parquet(output_path, index=False)
+    # create embed datafrmae
+    embed_df = df[["filename"]].copy()
+    embed_df["embeddings"] = embeddings.cpu().tolist()  # convert tensor to list
+
+    # save the embeddings to parquet
+    embed_df.to_parquet(output_path)
+    print(f"Embeddings saved to {output_path}")

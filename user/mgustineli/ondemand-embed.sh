@@ -15,12 +15,12 @@ nvidia-smi                                                  # Check GPU usage
 
 # define paths
 scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
-project_data_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef/data
+project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 dataset_name=train # train, val, test
 
 # run the Python script
 fungiclef embed workflow \
-    $project_data_dir/dataset/processed/${dataset_name}_serialized.parquet \
-    $project_data_dir/embeddings/${dataset_name}_embed.parquet \
+    $project_dir/data/dataset/processed/${dataset_name}_serialized.parquet \
+    $project_dir/temp/embeddings/${dataset_name}_embed.parquet \
     --cpu-count 4 \
     --batch-size 64 \

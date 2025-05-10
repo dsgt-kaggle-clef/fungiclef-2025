@@ -45,6 +45,9 @@ dev = [
 Homepage = "https://github.com/dsgt-kaggle-clef/fungiclef-2025"
 Issues = "https://github.com/dsgt-kaggle-clef/fungiclef-2025/issues"
 
+[project.scripts]
+fungiclef = "fungiclef.cli:app"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
