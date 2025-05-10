@@ -28,6 +28,7 @@ dependencies = [
     "tensorboard",
     "timm",
     "aria2>=0.0.1b0",
+    "typer>=0.15.3",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,7 @@ dev = [
     "ruff",
     "pre-commit",
     "pytest",
+    "ipywidgets",
     "pace-job-monitoring@git+https://github.com/dsgt-kaggle-clef/pace-job-monitoring.git#main"
 ]
 

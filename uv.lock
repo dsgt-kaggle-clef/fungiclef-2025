@@ -1586,6 +1586,7 @@ dependencies = [
     { name = "tqdm" },
     { name = "transformers", version = "4.46.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "transformers", version = "4.51.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "typer" },
 ]
 
 [package.optional-dependencies]
@@ -1626,6 +1627,7 @@ requires-dist = [
     { name = "torchvision" },
     { name = "tqdm" },
     { name = "transformers" },
+    { name = "typer", specifier = ">=0.15.3" },
 ]
 provides-extras = ["dev"]
 
