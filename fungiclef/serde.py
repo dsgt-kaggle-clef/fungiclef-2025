@@ -1,7 +1,5 @@
-"""Module for encoding and decoding data structures to and from raw bytes"""
-
-from PIL import Image
 import io
+from PIL import Image
 
 
 def deserialize_image(buffer: bytes | bytearray) -> Image.Image:
