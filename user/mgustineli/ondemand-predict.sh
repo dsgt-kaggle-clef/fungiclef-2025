@@ -18,15 +18,17 @@ scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 test_parquet="test_serialized"
 test_embed="test_embed"
-model_name="plantclef-fungi-classifier-epoch=05-val_loss=5.18.ckpt"
+model_name="base-fungi-classifier-epoch=05-val_loss=5.16.ckpt"
+embedding_dir="dinov2" # plantclef or dinov2
+csv_filename="base_prediction_v1.csv" # prediction filename
 
 
 # run the Python script
 fungiclef prediction predict \
     $project_dir/data/dataset/processed/${test_parquet}.parquet \
-    $project_dir/data/embeddings/plantclef/${test_embed}.parquet \
+    $project_dir/data/embeddings/$embedding_dir/${test_embed}.parquet \
     $project_dir/model/classifier/$model_name \
-    $project_dir/prediction/plantclef_prediction_v1.csv \
+    $project_dir/prediction/$csv_filename \
     --cpu-count 4 \
     --batch-size 64 \
-    --embedding-col "embeddings" \
+    --embedding-col "embedding" \

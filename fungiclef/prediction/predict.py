@@ -4,16 +4,26 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 
+from fungiclef.config import get_class_mappings_file
 from fungiclef.torch.data import FungiDataModule
 from fungiclef.torch.model import DINOv2LightningModel
 
 
+def load_class_mappings(class_mappings_file: str = None) -> dict:
+    with open(class_mappings_file, "r") as f:
+        class_index_to_class_name = {i: line.strip() for i, line in enumerate(f)}
+    return class_index_to_class_name
+
+
 def load_and_merge_embeddings(
-    parquet_path: str, embed_path: str, columns: list
+    parquet_path: str,
+    embed_path: str,
+    columns: list,
+    embedding_col: str = "embeddings",
 ) -> pd.DataFrame:
     """Load and merge metadata and embeddings"""
     df_meta = pd.read_parquet(parquet_path, columns=columns)
-    df_embed = pd.read_parquet(embed_path)
+    df_embed = pd.read_parquet(embed_path, columns=["filename", embedding_col])
     return df_meta.merge(df_embed, on="filename", how="inner")
 
 
@@ -26,6 +36,7 @@ def generate_predictions(
     batch_size: int = 64,
     embedding_col: str = "embedding",
     id_col: str = "observationID",
+    top_k: int = 10,
 ):
     """
     Generate predictions using a trained model.
@@ -39,9 +50,16 @@ def generate_predictions(
         embedding_col: Column name containing embeddings
         id_col: Column name containing observation IDs
     """
+    # class mappings file for classification
+    class_mappings_file = get_class_mappings_file()
+    # load class mappings
+    cid_to_spid = load_class_mappings(class_mappings_file)
+
     # load test data
     columns = ["filename", "observationID"]
-    test_df = load_and_merge_embeddings(test_parquet_path, test_embed_path, columns)
+    test_df = load_and_merge_embeddings(
+        test_parquet_path, test_embed_path, columns, embedding_col
+    )
 
     # create data module
     data_module = FungiDataModule(
@@ -74,14 +92,26 @@ def generate_predictions(
         for batch_idx, batch in enumerate(tqdm(data_module.predict_dataloader())):
             # Forward pass
             _, batch_predictions = model.predict_step(batch, batch_idx)
-            all_predictions.extend(batch_predictions)
+            top_probs, top_indices = torch.topk(batch_predictions, k=top_k, dim=1)
+
+            # map class indices to species names
+            batch_preds = []
+            for i in range(len(batch_predictions)):
+                species_probs = {
+                    cid_to_spid.get(int(top_indices[i, j].item()), "Unknown"): float(
+                        top_probs[i, j].item()
+                    )
+                    for j in range(top_k)
+                }
+                batch_preds.append(species_probs)
+            all_predictions.extend(batch_preds)
 
     # Format predictions in the required format
     print("Formatting predictions...")
 
     # Group predictions observation ID
     observations = {}
-    for i, pred_dict in enumerate(all_predictions):
+    for i, predictions in enumerate(all_predictions):
         # Get observation ID
         obs_id = test_df.iloc[i][id_col]
 
@@ -89,25 +119,25 @@ def generate_predictions(
             observations[obs_id] = []
 
         # Add the predictions for this image to the observation
-        observations[obs_id].append(pred_dict)
+        observations[obs_id].append(predictions)
 
     results = []
 
-    for obs_id, pred_dicts in observations.items():
+    for obs_id, prediction in observations.items():
         # Get observation ID if available, otherwise use index
         combined_preds = {}
 
         # sum up all prediction scores for each species across all images
-        for pred_dict in pred_dicts:
+        for pred_dict in prediction:
             for species, score in pred_dict.items():
                 if species not in combined_preds:
                     combined_preds[species] = 0
                 combined_preds[species] += score
 
         # If there are multiple images, average the scores
-        if len(pred_dicts) > 1:
+        if len(prediction) > 1:
             for species in combined_preds:
-                combined_preds[species] /= len(pred_dicts)
+                combined_preds[species] /= len(prediction)
 
         # Get top 10 predictions with highest confidence
         top_predictions = sorted(

@@ -15,11 +15,14 @@ from fungiclef.torch.model import DINOv2LightningModel
 
 
 def load_and_merge_embeddings(
-    parquet_path: str, embed_path: str, columns: list
+    parquet_path: str,
+    embed_path: str,
+    columns: list,
+    embedding_col: str = "embeddings",
 ) -> pd.DataFrame:
     """Load and merge metadata and embeddings"""
     df_meta = pd.read_parquet(parquet_path, columns=columns)
-    df_embed = pd.read_parquet(embed_path)
+    df_embed = pd.read_parquet(embed_path, columns=["filename", embedding_col])
     return df_meta.merge(df_embed, on="filename", how="inner")
 
 
@@ -33,6 +36,8 @@ def train_fungi_classifier(
     max_epochs: int = 10,
     learning_rate: float = 1e-3,
     output_dir: str = "model",
+    model_name: str = "fungi-classifier",
+    embedding_col: str = "embeddings",
 ):
     """
     Train a fungi classifier based on DINOv2 features.
@@ -58,8 +63,14 @@ def train_fungi_classifier(
         "poisonous",
     ]
     # load data
-    train_df = load_and_merge_embeddings(train_parquet_path, train_embed_path, columns)
-    val_df = load_and_merge_embeddings(val_parquet_path, val_embed_path, columns)
+    train_df = load_and_merge_embeddings(
+        train_parquet_path, train_embed_path, columns, embedding_col
+    )
+    val_df = load_and_merge_embeddings(
+        val_parquet_path, val_embed_path, columns, embedding_col
+    )
+    print(f"Train DF cols: {train_df.columns}")
+    print(f"Val DF cols: {val_df.columns}")
 
     # create data module
     data_module = FungiDataModule(
@@ -68,7 +79,7 @@ def train_fungi_classifier(
         test_df=None,
         batch_size=batch_size,
         num_workers=num_workers,
-        embedding_col="embeddings",
+        embedding_col=embedding_col,
         label_col="category_id",
     )
 
@@ -79,7 +90,7 @@ def train_fungi_classifier(
     # set up callbacks
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_dir,
-        filename="plantclef-fungi-classifier-{epoch:02d}-{val_loss:.2f}",
+        filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.2f}}",
         save_top_k=3,
         monitor="val_loss",
         mode="min",
@@ -121,6 +132,12 @@ def main(
     output_model_path: str = typer.Option(
         "models", help="Directory to save model checkpoints"
     ),
+    model_name: str = typer.Option(
+        "fungi-classifier", help="Name of the model to save checkpoints"
+    ),
+    embedding_col: str = typer.Option(
+        "embeddings", help="Column name containing embeddings"
+    ),
 ):
     # Create output directory if it doesn't exist
     Path(output_model_path).mkdir(parents=True, exist_ok=True)
@@ -136,4 +153,6 @@ def main(
         max_epochs=max_epochs,
         learning_rate=learning_rate,
         output_dir=output_model_path,
+        model_name=model_name,
+        embedding_col=embedding_col,
     )
