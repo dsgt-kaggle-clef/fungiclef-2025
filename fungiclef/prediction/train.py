@@ -5,6 +5,7 @@ from pathlib import Path
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 
+from fungiclef.config import get_device
 from fungiclef.torch.data import FungiDataModule
 from fungiclef.torch.model import DINOv2LightningModel
 
@@ -40,6 +41,7 @@ def train_fungi_classifier(
     output_dir: str = "model",
     model_name: str = "fungi-classifier",
     embedding_col: str = "embeddings",
+    early_stopping_patience: int = 3,
 ):
     """
     Train a fungi classifier based on DINOv2 features.
@@ -86,8 +88,7 @@ def train_fungi_classifier(
     )
 
     # create model
-    model = DINOv2LightningModel()
-    model.learning_rate = learning_rate  # Set learning rate
+    model = DINOv2LightningModel(learning_rate=learning_rate)
 
     # set up callbacks
     checkpoint_callback = ModelCheckpoint(
@@ -100,7 +101,7 @@ def train_fungi_classifier(
 
     early_stop_callback = EarlyStopping(
         monitor="val_loss",
-        patience=3,
+        patience=early_stopping_patience,
         mode="min",
     )
 
@@ -112,7 +113,7 @@ def train_fungi_classifier(
         max_epochs=max_epochs,
         callbacks=[checkpoint_callback, early_stop_callback],
         logger=logger,
-        accelerator="auto",  # Automatically select GPU if available
+        accelerator=get_device(),
     )
 
     # Train model
@@ -140,6 +141,7 @@ def main(
     embedding_col: str = typer.Option(
         "embeddings", help="Column name containing embeddings"
     ),
+    early_stopping_patience: int = typer.Option(3, help="Patience for early stopping"),
 ):
     # Create output directory if it doesn't exist
     Path(output_model_path).mkdir(parents=True, exist_ok=True)
@@ -157,4 +159,5 @@ def main(
         output_dir=output_model_path,
         model_name=model_name,
         embedding_col=embedding_col,
+        early_stopping_patience=early_stopping_patience,
     )

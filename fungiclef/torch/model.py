@@ -10,12 +10,13 @@ class DINOv2LightningModel(pl.LightningModule):
     def __init__(
         self,
         top_k: int = 10,
+        learning_rate: float = 1e-3,
     ):
         super().__init__()
         self.model_device = get_device()
         self.num_classes = 2427  # total fungi species, 0 to 2426 category ids
         self.top_k = top_k
-        self.learning_rate = 1e-3
+        self.learning_rate = learning_rate
 
         # emb_dim = self._get_embedding_dim()
         self.emb_dim = 768
@@ -67,7 +68,3 @@ class DINOv2LightningModel(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-
-
-if __name__ == "__main__":
-    pass

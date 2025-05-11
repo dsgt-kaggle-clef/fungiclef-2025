@@ -16,12 +16,12 @@ nvidia-smi                                                  # Check GPU usage
 # define paths
 scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_data_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef/data
-train_parquet="train_serialized"
-train_embed="train_embed"
+train_parquet="train_augment_serialized"
+train_embed="train_augment_embed"
 val_parquet="val_serialized"
 val_embed="val_embed"
-embedding_dir="dinov2" # plantclef or dinov2
-model_name="base-fungi-classifier" # model name
+embedding_dir="plantclef" # plantclef or dinov2
+model_name="${embedding_dir}-augment-classifier" # model name
 
 # run the Python script
 fungiclef prediction train \
@@ -35,4 +35,5 @@ fungiclef prediction train \
     --learning-rate 0.001 \
     --output-model-path "model" \
     --model-name $model_name \
-    --embedding-col "embedding" \
+    --embedding-col "embeddings" \
+    --early-stopping-patience 3 \
