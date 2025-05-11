@@ -2,18 +2,13 @@ import typer
 import pandas as pd
 import pytorch_lightning as pl
 from pathlib import Path
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
+from fungiclef.config import get_device
 from fungiclef.torch.data import FungiDataModule
-from fungiclef.torch.model import DINOv2LightningModel
-
-## training pipeline
-### example usage: python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/dinov2/train_embeddings.parquet --val scratch/fungiclef/embeddings/dinov2/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/base_model --learning-rate 1e-3
-
-# python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/dinov2/train_augment_embeddings.parquet --val scratch/fungiclef/embeddings/dinov2/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/base_model --learning-rate 1e-3
-
-### example usage: python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --val scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/plantclef --learning-rate 1e-3
+from fungiclef.torch.model import LinearClassifier
+from fungiclef.torch.mixup import MixupClassifier
 
 
 def load_and_merge_embeddings(
@@ -28,11 +23,20 @@ def load_and_merge_embeddings(
     return df_meta.merge(df_embed, on="filename", how="inner")
 
 
+def get_classifier_class(model_type: str):
+    """Get the model class based on the model type."""
+    if model_type == "mixup":
+        return MixupClassifier
+    elif model_type == "linear":
+        return LinearClassifier
+
+
 def train_fungi_classifier(
     train_parquet_path: str,
     train_embed_path: str,
     val_parquet_path: str,
     val_embed_path: str,
+    model_type: str = "linear",
     batch_size: int = 64,
     num_workers: int = 6,
     max_epochs: int = 10,
@@ -40,6 +44,7 @@ def train_fungi_classifier(
     output_dir: str = "model",
     model_name: str = "fungi-classifier",
     embedding_col: str = "embeddings",
+    early_stopping_patience: int = 3,
 ):
     """
     Train a fungi classifier based on DINOv2 features.
@@ -86,10 +91,13 @@ def train_fungi_classifier(
     )
 
     # create model
-    model = DINOv2LightningModel()
-    model.learning_rate = learning_rate  # Set learning rate
+    classifier_cls = get_classifier_class(model_type)  # "linear" or "mixup"
+    model = classifier_cls(batch_size=batch_size, learning_rate=learning_rate)
 
-    # set up callbacks
+    # Set up logger
+    logger = TensorBoardLogger("logs", name="fungi-classifier")
+
+    # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_dir,
         filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.2f}}",
@@ -100,25 +108,20 @@ def train_fungi_classifier(
 
     early_stop_callback = EarlyStopping(
         monitor="val_loss",
-        patience=3,
+        patience=early_stopping_patience,
         mode="min",
     )
 
-    # Set up logger
-    logger = TensorBoardLogger("logs", name="fungi-classifier")
-
-    # Create trainer
+    # Initialize a new Trainer for actual training
     trainer = pl.Trainer(
         max_epochs=max_epochs,
         callbacks=[checkpoint_callback, early_stop_callback],
         logger=logger,
-        accelerator="auto",  # Automatically select GPU if available
+        accelerator=get_device(),
     )
 
-    # Train model
-    print("Starting training...")
+    # Start training
     trainer.fit(model, data_module)
-
     print(f"Model saved to {checkpoint_callback.best_model_path}")
 
 
@@ -127,6 +130,9 @@ def main(
     train_embed_path: str = typer.Argument(..., help="Path to training data parquet"),
     val_parquet_path: str = typer.Argument(..., help="Path to validation data parquet"),
     val_embed_path: str = typer.Argument(..., help="Path to validation data parquet"),
+    model_type: str = typer.Option(
+        "linear", help="Type of model to train (linear or mixup)"
+    ),
     cpu_count: int = typer.Option(6, help="Number of workers for data loading"),
     batch_size: int = typer.Option(64, help="Batch size for training"),
     max_epochs: int = typer.Option(10, help="Maximum number of training epochs"),
@@ -140,6 +146,7 @@ def main(
     embedding_col: str = typer.Option(
         "embeddings", help="Column name containing embeddings"
     ),
+    early_stopping_patience: int = typer.Option(3, help="Patience for early stopping"),
 ):
     # Create output directory if it doesn't exist
     Path(output_model_path).mkdir(parents=True, exist_ok=True)
@@ -150,6 +157,7 @@ def main(
         train_embed_path=train_embed_path,
         val_parquet_path=val_parquet_path,
         val_embed_path=val_embed_path,
+        model_type=model_type,
         num_workers=cpu_count,
         batch_size=batch_size,
         max_epochs=max_epochs,
@@ -157,4 +165,5 @@ def main(
         output_dir=output_model_path,
         model_name=model_name,
         embedding_col=embedding_col,
+        early_stopping_patience=early_stopping_patience,
     )
