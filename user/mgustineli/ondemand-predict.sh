@@ -18,9 +18,9 @@ scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 test_parquet="test_serialized"
 test_embed="test_embed"
-model_name="plantclef-augment-classifier-epoch=00-val_loss=6.58.ckpt"
+model_name="plantclef-augment-linear-v2-epoch=00-val_loss=5.78.ckpt"
 embedding_dir="plantclef" # plantclef or dinov2
-csv_filename="plantclef_augment_prediction_v1.csv" # prediction filename
+csv_filename="plantclef_augment_prediction_linear_v2.csv" # prediction filename
 
 
 # run the Python script

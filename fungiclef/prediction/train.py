@@ -2,8 +2,8 @@ import typer
 import pandas as pd
 import pytorch_lightning as pl
 from pathlib import Path
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from fungiclef.config import get_device
 from fungiclef.torch.data import FungiDataModule
@@ -88,9 +88,12 @@ def train_fungi_classifier(
     )
 
     # create model
-    model = DINOv2LightningModel(learning_rate=learning_rate)
+    model = DINOv2LightningModel(batch_size=batch_size, learning_rate=learning_rate)
 
-    # set up callbacks
+    # Set up logger
+    logger = TensorBoardLogger("logs", name="fungi-classifier")
+
+    # Set up callbacks
     checkpoint_callback = ModelCheckpoint(
         dirpath=output_dir,
         filename=f"{model_name}-{{epoch:02d}}-{{val_loss:.2f}}",
@@ -105,10 +108,7 @@ def train_fungi_classifier(
         mode="min",
     )
 
-    # Set up logger
-    logger = TensorBoardLogger("logs", name="fungi-classifier")
-
-    # Create trainer
+    # Initialize a new Trainer for actual training
     trainer = pl.Trainer(
         max_epochs=max_epochs,
         callbacks=[checkpoint_callback, early_stop_callback],
@@ -116,10 +116,8 @@ def train_fungi_classifier(
         accelerator=get_device(),
     )
 
-    # Train model
-    print("Starting training...")
+    # Start training
     trainer.fit(model, data_module)
-
     print(f"Model saved to {checkpoint_callback.best_model_path}")
 
 

@@ -1,13 +1,15 @@
-"""Script to augment fungi dataset using PyTorch transforms and save as serialized parquet."""
-
+import typer
 import pandas as pd
 import os
 import io
 import random
 from PIL import Image
-from collections import Counter
 from tqdm import tqdm
-from transform import get_transform_pipeline
+from pathlib import Path
+from collections import Counter
+from .transform import get_transform_pipeline
+
+"""Script to augment fungi dataset using PyTorch transforms and save as serialized parquet."""
 
 
 def augment_and_serialize(
@@ -161,34 +163,30 @@ def augment_and_serialize(
     print(f"Saved {len(serialized_df)} serialized images to {output_parquet}")
 
 
-if __name__ == "__main__":
-    pass
-    # parser = argparse.ArgumentParser(description='Augment and serialize fungi dataset')
-    # parser.add_argument('--metadata', type=str, required=True,
-    #                     help='Path to metadata CSV file')
-    # parser.add_argument('--images', type=str, required=True,
-    #                     help='Directory containing original images')
-    # parser.add_argument('--output', type=str, required=True,
-    #                     help='Path to save serialized augmented dataset')
-    # parser.add_argument('--target-col', type=str, default='category_id',
-    #                     help='Target column for classification')
-    # parser.add_argument('--img-col', type=str, default='filename',
-    #                     help='Column containing image filenames')
-    # parser.add_argument('--img-size', type=int, default=224,
-    #                     help='Image size for transforms')
-    # parser.add_argument('--scale', type=float, default=10.0,
-    #                     help='Scale factor for augmentation (e.g., 10 for 10x)')
-    # args = parser.parse_args()
+def main(
+    metadata: str = typer.Argument(..., help="Path to metadata CSV file"),
+    images_dir: str = typer.Argument(..., help="Directory containing original images"),
+    output_path: str = typer.Argument(
+        ..., help="Path to save serialized augmented dataset"
+    ),
+    target_col: str = typer.Option(
+        "category_id", help="Target column for classification"
+    ),
+    img_col: str = typer.Option("filename", help="Column containing image filenames"),
+    img_size: int = typer.Option(224, help="Image size for transforms"),
+    scale_factor: int = typer.Option(
+        3, help="Scale factor for augmentation (e.g., 10 for 10x)"
+    ),
+):
+    # Create output directory if needed
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
-    # # Create output directory if needed
-    # Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-
-    # augment_and_serialize(
-    #     csv_path=args.metadata,
-    #     image_dir=args.images,
-    #     output_parquet=args.output,
-    #     target_col=args.target_col,
-    #     image_col=args.img_col,
-    #     img_size=args.img_size,
-    #     scale_factor=args.scale,
-    # )
+    augment_and_serialize(
+        csv_path=metadata,
+        image_dir=images_dir,
+        output_parquet=output_path,
+        target_col=target_col,
+        image_col=img_col,
+        img_size=img_size,
+        scale_factor=scale_factor,
+    )
