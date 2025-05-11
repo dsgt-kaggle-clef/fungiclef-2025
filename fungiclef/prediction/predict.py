@@ -6,7 +6,8 @@ from pathlib import Path
 
 from fungiclef.config import get_class_mappings_file
 from fungiclef.torch.data import FungiDataModule
-from fungiclef.torch.model import DINOv2LightningModel
+from fungiclef.torch.model import LinearClassifier
+from fungiclef.torch.mixup import MixupClassifier
 
 
 def load_class_mappings(class_mappings_file: str = None) -> dict:
@@ -27,11 +28,20 @@ def load_and_merge_embeddings(
     return df_meta.merge(df_embed, on="filename", how="inner")
 
 
+def get_classifier_class(model_type: str):
+    """Get the model class based on the model type."""
+    if model_type == "mixup":
+        return MixupClassifier
+    elif model_type == "linear":
+        return LinearClassifier
+
+
 def generate_predictions(
     test_parquet_path: str,
     test_embed_path: str,
     model_path: str,
     output_path: str = "predictions.csv",
+    model_type: str = "linear",
     num_workers: int = 6,
     batch_size: int = 64,
     embedding_col: str = "embedding",
@@ -77,7 +87,8 @@ def generate_predictions(
 
     # load trained model
     print(f"Loading model from {model_path}")
-    model = DINOv2LightningModel.load_from_checkpoint(model_path)
+    classifier_cls = get_classifier_class(model_type)
+    model = classifier_cls.load_from_checkpoint(model_path)
     model.eval()
 
     # set device
@@ -166,6 +177,7 @@ def main(
     output_path: str = typer.Argument(
         "predictions.csv", help="Path to save predictions"
     ),
+    model_type: str = typer.Option("linear", help="Model type: 'linear' or 'mixup'"),
     cpu_count: int = typer.Option(6, help="Number of workers for data loading"),
     batch_size: int = typer.Option(64, help="Batch size for inference"),
     embedding_col: str = typer.Option(
@@ -184,6 +196,7 @@ def main(
         test_embed_path=test_embed_path,
         model_path=model_path,
         output_path=output_path,
+        model_type=model_type,
         num_workers=cpu_count,
         batch_size=batch_size,
         embedding_col=embedding_col,

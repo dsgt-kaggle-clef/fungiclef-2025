@@ -4,7 +4,7 @@ import torch.nn as nn
 from fungiclef.config import get_device
 
 
-class DINOv2LightningModel(pl.LightningModule):
+class LinearClassifier(pl.LightningModule):
     """PyTorch Lightning module for training a classifier on pre-extracted embeddings from parquet files."""
 
     def __init__(
@@ -20,20 +20,11 @@ class DINOv2LightningModel(pl.LightningModule):
         self.emb_dim = 768
         self.hidden_dim = 1363  # geometric mean of 768 and 2427
 
-        # Trainable Logistic Regression head
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(self.emb_dim, self.hidden_dim),
-        #     nn.ReLU(),
-        #     nn.Linear(self.hidden_dim, self.num_classes),
-        # )
-
+        # initialize the model
         self.classifier = nn.Linear(self.emb_dim, self.num_classes)
 
     def forward(self, embeddings):
         """Extract embeddings using the [CLS] token."""
-        # embeddings = embeddings.to(self.model_device)
-        # # forward pass
-        # logits = self.classifier(embeddings)
         return self.classifier(embeddings)
 
     def training_step(self, batch, batch_idx):

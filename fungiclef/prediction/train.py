@@ -7,14 +7,8 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from fungiclef.config import get_device
 from fungiclef.torch.data import FungiDataModule
-from fungiclef.torch.model import DINOv2LightningModel
-
-## training pipeline
-### example usage: python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/dinov2/train_embeddings.parquet --val scratch/fungiclef/embeddings/dinov2/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/base_model --learning-rate 1e-3
-
-# python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/dinov2/train_augment_embeddings.parquet --val scratch/fungiclef/embeddings/dinov2/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/base_model --learning-rate 1e-3
-
-### example usage: python clef/fungiclef-2025/fungiclef/prediction/train.py --train scratch/fungiclef/embeddings/plantclef/train_embeddings.parquet --val scratch/fungiclef/embeddings/plantclef/val_embeddings.parquet --batch-size 64 --max-epochs 20 --output-dir scratch/fungiclef/model/plantclef --learning-rate 1e-3
+from fungiclef.torch.model import LinearClassifier
+from fungiclef.torch.mixup import MixupClassifier
 
 
 def load_and_merge_embeddings(
@@ -29,11 +23,20 @@ def load_and_merge_embeddings(
     return df_meta.merge(df_embed, on="filename", how="inner")
 
 
+def get_classifier_class(model_type: str):
+    """Get the model class based on the model type."""
+    if model_type == "mixup":
+        return MixupClassifier
+    elif model_type == "linear":
+        return LinearClassifier
+
+
 def train_fungi_classifier(
     train_parquet_path: str,
     train_embed_path: str,
     val_parquet_path: str,
     val_embed_path: str,
+    model_type: str = "linear",
     batch_size: int = 64,
     num_workers: int = 6,
     max_epochs: int = 10,
@@ -88,7 +91,8 @@ def train_fungi_classifier(
     )
 
     # create model
-    model = DINOv2LightningModel(batch_size=batch_size, learning_rate=learning_rate)
+    classifier_cls = get_classifier_class(model_type)  # "linear" or "mixup"
+    model = classifier_cls(batch_size=batch_size, learning_rate=learning_rate)
 
     # Set up logger
     logger = TensorBoardLogger("logs", name="fungi-classifier")
@@ -126,6 +130,9 @@ def main(
     train_embed_path: str = typer.Argument(..., help="Path to training data parquet"),
     val_parquet_path: str = typer.Argument(..., help="Path to validation data parquet"),
     val_embed_path: str = typer.Argument(..., help="Path to validation data parquet"),
+    model_type: str = typer.Option(
+        "linear", help="Type of model to train (linear or mixup)"
+    ),
     cpu_count: int = typer.Option(6, help="Number of workers for data loading"),
     batch_size: int = typer.Option(64, help="Batch size for training"),
     max_epochs: int = typer.Option(10, help="Maximum number of training epochs"),
@@ -150,6 +157,7 @@ def main(
         train_embed_path=train_embed_path,
         val_parquet_path=val_parquet_path,
         val_embed_path=val_embed_path,
+        model_type=model_type,
         num_workers=cpu_count,
         batch_size=batch_size,
         max_epochs=max_epochs,
