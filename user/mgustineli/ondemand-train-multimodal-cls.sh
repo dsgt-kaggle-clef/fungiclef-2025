@@ -29,7 +29,7 @@ fungiclef multimodal train \
     $project_data_dir/embeddings/bert/val_text_embed.parquet \
     --batch-size  256 \
     --cpu-count 4 \
-    --max-epochs 10 \
+    --max-epochs 100 \
     --learning-rate 0.0005 \
     --output-model-path "model" \
     --model-name $model_name \

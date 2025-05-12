@@ -36,7 +36,7 @@ def train_multimodal_classifier(
     early_stopping_patience: int = 3,
 ):
     # Required columns
-    columns = [
+    image_columns = [
         "filename",
         "category_id",
         "species",
@@ -46,20 +46,21 @@ def train_multimodal_classifier(
         "class",
         "poisonous",
     ]
+    text_columns = ["filename"]
 
     # Load training data
     train_image_df = load_and_merge_embeddings(
-        train_parquet, train_image_embed, columns, embedding_col
+        train_parquet, train_image_embed, image_columns, embedding_col
     )
     train_text_df = load_and_merge_embeddings(
-        train_parquet, train_text_embed, columns, embedding_col
+        train_parquet, train_text_embed, text_columns, embedding_col
     )
 
     val_image_df = load_and_merge_embeddings(
-        val_parquet, val_image_embed, columns, embedding_col
+        val_parquet, val_image_embed, image_columns, embedding_col
     )
     val_text_df = load_and_merge_embeddings(
-        val_parquet, val_text_embed, columns, embedding_col
+        val_parquet, val_text_embed, text_columns, embedding_col
     )
 
     # Setup data module
