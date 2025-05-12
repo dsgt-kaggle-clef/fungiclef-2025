@@ -29,6 +29,8 @@ dependencies = [
     "timm",
     "aria2>=0.0.1b0",
     "typer>=0.15.3",
+    "python-dotenv>=1.0.1",
+    "kaggle>=1.7.4.5",
 ]
 
 [project.optional-dependencies]
