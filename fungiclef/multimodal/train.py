@@ -20,12 +20,10 @@ def load_and_merge_embeddings(
 
 
 def train_multimodal_classifier(
-    train_image_parquet: str,
-    train_text_parquet: str,
+    train_parquet: str,
     train_image_embed: str,
     train_text_embed: str,
-    val_image_parquet: str,
-    val_text_parquet: str,
+    val_parquet: str,
     val_image_embed: str,
     val_text_embed: str,
     batch_size: int = 64,
@@ -51,17 +49,17 @@ def train_multimodal_classifier(
 
     # Load training data
     train_image_df = load_and_merge_embeddings(
-        train_image_parquet, train_image_embed, columns, embedding_col
+        train_parquet, train_image_embed, columns, embedding_col
     )
     train_text_df = load_and_merge_embeddings(
-        train_text_parquet, train_text_embed, columns, embedding_col
+        train_parquet, train_text_embed, columns, embedding_col
     )
 
     val_image_df = load_and_merge_embeddings(
-        val_image_parquet, val_image_embed, columns, embedding_col
+        val_parquet, val_image_embed, columns, embedding_col
     )
     val_text_df = load_and_merge_embeddings(
-        val_text_parquet, val_text_embed, columns, embedding_col
+        val_parquet, val_text_embed, columns, embedding_col
     )
 
     # Setup data module
@@ -112,16 +110,14 @@ def train_multimodal_classifier(
 
 
 def main(
-    train_image_parquet: str = typer.Argument(...),
-    train_text_parquet: str = typer.Argument(...),
+    train_parquet: str = typer.Argument(...),
     train_image_embed: str = typer.Argument(...),
     train_text_embed: str = typer.Argument(...),
-    val_image_parquet: str = typer.Argument(...),
-    val_text_parquet: str = typer.Argument(...),
+    val_parquet: str = typer.Argument(...),
     val_image_embed: str = typer.Argument(...),
     val_text_embed: str = typer.Argument(...),
-    cpu_count: int = typer.Option(6, help="Number of workers"),
     batch_size: int = typer.Option(64, help="Batch size"),
+    cpu_count: int = typer.Option(6, help="Number of workers"),
     max_epochs: int = typer.Option(10),
     learning_rate: float = typer.Option(1e-3),
     output_model_path: str = typer.Option("models"),
@@ -132,12 +128,10 @@ def main(
     Path(output_model_path).mkdir(parents=True, exist_ok=True)
 
     train_multimodal_classifier(
-        train_image_parquet=train_image_parquet,
-        train_text_parquet=train_text_parquet,
+        train_parquet=train_parquet,
         train_image_embed=train_image_embed,
         train_text_embed=train_text_embed,
-        val_image_parquet=val_image_parquet,
-        val_text_parquet=val_text_parquet,
+        val_parquet=val_parquet,
         val_image_embed=val_image_embed,
         val_text_embed=val_text_embed,
         batch_size=batch_size,
