@@ -102,10 +102,8 @@ def generate_predictions(
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(data_module.predict_dataloader())):
             # Handle batch output
-            if isinstance(batch, tuple):
-                _, batch_predictions = model.predict_step(batch, batch_idx)
-            else:
-                batch_predictions = model.predict_step(batch, batch_idx)
+            output = model.predict_step(batch, batch_idx)
+            batch_predictions = output[1] if isinstance(output, tuple) else output
 
             # Get top probabilities and indices
             top_probs, top_indices = torch.topk(batch_predictions, k=top_k, dim=1)

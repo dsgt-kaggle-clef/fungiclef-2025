@@ -20,20 +20,23 @@ train_parquet="train_serialized"
 train_embed="train_embed"
 val_parquet="val_serialized"
 val_embed="val_embed"
-embedding_dir="plantclef" # plantclef or dinov2
-model_name="${embedding_dir}-classifier-mixup-v1" # model name
-model_type="mixup" # "linear" or "mixup"
+# models:
+# - vit_base_patch14_reg4_dinov2.lvd142m
+# - hf-hub:BVRA/beit_base_patch16_384.in1k_ft_df24_384
+embedding_dir=beit_base_patch16_384
+model_name="beit-base-linear-v1" # model name
+model_type="linear" # "linear" or "mixup"
 
 # run the Python script
 fungiclef prediction train \
     $project_data_dir/dataset/processed/${train_parquet}.parquet \
-    $project_data_dir/embeddings/$embedding_dir/${train_embed}.parquet \
+    $project_data_dir/embeddings/$embedding_dir/${train_embed}_v1.parquet \
     $project_data_dir/dataset/processed/${val_parquet}.parquet \
-    $project_data_dir/embeddings/$embedding_dir/${val_embed}.parquet \
+    $project_data_dir/embeddings/$embedding_dir/${val_embed}_v1.parquet \
     --model-type $model_type \
     --cpu-count 4 \
     --batch-size  256 \
-    --max-epochs 10 \
+    --max-epochs 100 \
     --learning-rate 0.0005 \
     --output-model-path "model" \
     --model-name $model_name \

@@ -15,7 +15,6 @@ class EmbedModel(pl.LightningModule):
     ):
         super().__init__()
         self.model_device = get_device()
-        self.num_classes = 7806  # total plant species
 
         # load the fine-tuned model
         self.model = self._get_model(model_name)
@@ -33,6 +32,7 @@ class EmbedModel(pl.LightningModule):
     def _get_model(self, model_name: str):
         """Load the model from the specified path."""
         if model_name == "vit_base_patch14_reg4_dinov2.lvd142m":
+            self.num_classes = 7806  # total plant species
             model_path = setup_fine_tuned_model()
             # load the fine-tuned plantclef model
             return timm.create_model(
@@ -43,6 +43,7 @@ class EmbedModel(pl.LightningModule):
             )
         else:
             # load fine-tuned model from timm
+            self.num_classes = 2829  # total fungi species
             return timm.create_model(
                 model_name,
                 pretrained=True,
