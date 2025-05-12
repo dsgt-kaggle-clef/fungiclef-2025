@@ -6,12 +6,11 @@ from fungiclef.config import get_device
 from fungiclef.model_setup import setup_fine_tuned_model
 
 
-class DINOv2LightningModel(pl.LightningModule):
+class EmbedModel(pl.LightningModule):
     """PyTorch Lightning module for extracting embeddings from a fine-tuned DINOv2 model."""
 
     def __init__(
         self,
-        model_path: str = setup_fine_tuned_model(),
         model_name: str = "vit_base_patch14_reg4_dinov2.lvd142m",
     ):
         super().__init__()
@@ -19,12 +18,7 @@ class DINOv2LightningModel(pl.LightningModule):
         self.num_classes = 7806  # total plant species
 
         # load the fine-tuned model
-        self.model = timm.create_model(
-            model_name,
-            pretrained=False,
-            num_classes=self.num_classes,
-            checkpoint_path=model_path,
-        )
+        self.model = self._get_model(model_name)
 
         # load transform
         self.data_config = timm.data.resolve_model_data_config(self.model)
@@ -35,6 +29,25 @@ class DINOv2LightningModel(pl.LightningModule):
         # move model to device
         self.model.to(self.model_device)
         self.model.eval()
+
+    def _get_model(self, model_name: str):
+        """Load the model from the specified path."""
+        if model_name == "vit_base_patch14_reg4_dinov2.lvd142m":
+            model_path = setup_fine_tuned_model()
+            # load the fine-tuned plantclef model
+            return timm.create_model(
+                model_name,
+                pretrained=False,
+                num_classes=self.num_classes,
+                checkpoint_path=model_path,
+            )
+        else:
+            # load fine-tuned model from timm
+            return timm.create_model(
+                model_name,
+                pretrained=True,
+                num_classes=self.num_classes,
+            )
 
     def forward(self, batch):
         """Extract [CLS] token embeddings using fine-tuned model."""
