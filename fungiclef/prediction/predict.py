@@ -101,8 +101,13 @@ def generate_predictions(
 
     with torch.no_grad():
         for batch_idx, batch in enumerate(tqdm(data_module.predict_dataloader())):
-            # Forward pass
-            _, batch_predictions = model.predict_step(batch, batch_idx)
+            # Handle batch output
+            if isinstance(batch, tuple):
+                _, batch_predictions = model.predict_step(batch, batch_idx)
+            else:
+                batch_predictions = model.predict_step(batch, batch_idx)
+
+            # Get top probabilities and indices
             top_probs, top_indices = torch.topk(batch_predictions, k=top_k, dim=1)
 
             # map class indices to species names

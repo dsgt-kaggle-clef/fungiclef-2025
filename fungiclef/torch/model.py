@@ -18,7 +18,6 @@ class LinearClassifier(pl.LightningModule):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.emb_dim = 768
-        self.hidden_dim = 1363  # geometric mean of 768 and 2427
 
         # initialize the model
         self.classifier = nn.Linear(self.emb_dim, self.num_classes)
