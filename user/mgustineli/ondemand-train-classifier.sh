@@ -23,9 +23,10 @@ val_embed="val_embed"
 # models:
 # - vit_base_patch14_reg4_dinov2.lvd142m
 # - hf-hub:BVRA/beit_base_patch16_384.in1k_ft_df24_384
-embedding_dir=beit_base_patch16_384
-model_name="beit-base-linear-v1" # model name
+# - hf-hub:BVRA/vit_base_patch16_224.in1k_ft_df24_224
+embedding_dir=vit_base_patch16_224
 model_type="linear" # "linear" or "mixup"
+model_name="vit-base-${model_type}-v1" # model name
 
 # run the Python script
 fungiclef prediction train \

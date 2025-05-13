@@ -18,10 +18,10 @@ scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 test_parquet="test_serialized"
 test_embed="test_embed"
-model_name="beit-base-linear-v1-epoch=20-val_loss=6.19.ckpt"
-embedding_dir=beit_base_patch16_384 # plantclef or dinov2
-csv_filename="${embedding_dir}_linear_v1.csv" # prediction filename
+model_name="vit-base-linear-v1-epoch=19-val_loss=5.61.ckpt"
 model_type="linear" # "linear" or "mixup"
+embedding_dir=vit_base_patch16_224 # plantclef or dinov2
+csv_filename="${embedding_dir}_${model_type}_v1.csv" # prediction filename
 
 
 # run the Python script

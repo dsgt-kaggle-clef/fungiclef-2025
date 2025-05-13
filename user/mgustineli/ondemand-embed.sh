@@ -17,11 +17,12 @@ nvidia-smi                                                  # Check GPU usage
 scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 dataset_name=test # train, val, test
-embedding_dir=beit_base_patch16_384
+embedding_dir=vit_base_patch16_224
 # models:
 # - vit_base_patch14_reg4_dinov2.lvd142m
 # - hf-hub:BVRA/beit_base_patch16_384.in1k_ft_df24_384
-model_name=hf-hub:BVRA/beit_base_patch16_384.in1k_ft_df24_384
+# - hf-hub:BVRA/vit_base_patch16_224.in1k_ft_df24_224
+model_name=hf-hub:BVRA/vit_base_patch16_224.in1k_ft_df24_224
 
 # run the Python script
 fungiclef embed workflow \
