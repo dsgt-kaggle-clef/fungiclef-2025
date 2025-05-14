@@ -24,7 +24,7 @@ class FungiDataset(Dataset):
 
     def __getitem__(self, idx):
         img_bytes = self.df.iloc[idx][self.col_name]
-        img = deserialize_image(img_bytes)
+        img = deserialize_image(img_bytes)  # PIL image
 
         if self.transform:
             return self.transform(img)  # (C, H, W)
@@ -49,7 +49,7 @@ class FungiDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         """Set up dataset and transformations."""
-
+    
         self.model = EmbedModel(model_name=self.model_name)
         self.dataset = FungiDataset(
             self.pandas_df,
