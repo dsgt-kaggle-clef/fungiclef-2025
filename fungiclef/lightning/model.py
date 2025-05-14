@@ -43,12 +43,7 @@ class EmbedModel(pl.LightningModule):
             )
         else:
             # load fine-tuned model from timm
-            self.num_classes = 2829  # total fungi species
-            return timm.create_model(
-                model_name,
-                pretrained=True,
-                num_classes=self.num_classes,
-            )
+            return timm.create_model(model_name, pretrained=True)
 
     def forward(self, batch):
         """Extract [CLS] token embeddings using fine-tuned model."""
@@ -61,7 +56,6 @@ class EmbedModel(pl.LightningModule):
             # forward pass
             features = self.model.forward_features(batch)
             embeddings = features[:, 0, :]  # extract [CLS] token
-
         return embeddings
 
     def predict_step(self, batch, batch_idx):

@@ -14,6 +14,7 @@ def pl_trainer_pipeline(
     batch_size: int = 32,
     cpu_count: int = 1,
     model_name: str = "vit_base_patch14_reg4_dinov2.lvd142m",
+    resize_size: int = 224,
 ):
     """Pipeline to extract embeddings and top-k logits using PyTorch Lightning."""
 
@@ -23,6 +24,7 @@ def pl_trainer_pipeline(
         batch_size=batch_size,
         num_workers=cpu_count,
         model_name=model_name,
+        resize_size=resize_size,
     )
 
     # initialize Model
@@ -56,13 +58,14 @@ def main(
     model_name: str = typer.Option(
         "vit_base_patch14_reg4_dinov2.lvd142m", help="Model name."
     ),
+    resize_size: int = typer.Option(224, help="Resize size for images."),
 ):
     """Main function to run the embedding pipeline."""
     # load the DataFrame
     df = pd.read_parquet(input_path)
 
     # run the pipeline
-    embeddings = pl_trainer_pipeline(df, batch_size, cpu_count, model_name)
+    embeddings = pl_trainer_pipeline(df, batch_size, cpu_count, model_name, resize_size)
 
     # create embed datafrmae
     embed_df = df[["filename"]].copy()
