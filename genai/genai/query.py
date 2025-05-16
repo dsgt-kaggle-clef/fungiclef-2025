@@ -334,6 +334,7 @@ def extract_labels(
     ]
     train_df = pd.read_csv(train_metadata_path)
     test_df = pd.read_csv(test_metadata_path)
+    test_df = test_df.drop_duplicates(subset=["observationID"], keep="first")
 
     taxonomy_df = extract_taxonomy_df(train_df)
 
