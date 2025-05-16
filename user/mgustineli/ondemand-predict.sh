@@ -18,8 +18,8 @@ scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
 test_parquet="test_serialized"
 test_embed="test_embed"
-model_name="vit-base-384-linear-v1-epoch=21-val_loss=5.55.ckpt"
-model_type="linear" # "linear" or "mixup"
+model_name="vit-base-384-mixup-v1-epoch=04-val_loss=5.55.ckpt"
+model_type="mixup" # "linear" or "mixup"
 embedding_dir=vit_base_patch16_384 # plantclef or dinov2
 csv_filename="${embedding_dir}_${model_type}_v1.csv" # prediction filename
 
