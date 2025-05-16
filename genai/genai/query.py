@@ -9,6 +9,7 @@ import typer
 import json
 from tqdm import tqdm
 import dotenv
+import multiprocessing
 
 dotenv.load_dotenv()
 app = typer.Typer()
@@ -195,11 +196,20 @@ def process_row(row, taxonomy_df, image_root, output_path):
     (root / "_SUCESS").touch()
 
 
+def process_row_wrapper(args):
+    row, taxonomy_df, image_root, output_path = args
+    try:
+        return process_row(row, taxonomy_df, image_root, output_path)
+    except Exception as e:
+        print(f"Error processing row {row.observationID}: {e}")
+        return None
+
+
 @app.command()
 def extract_labels(
     root: Path,
     output_path: Path,
-    verbose: bool = False,
+    num_workers: int = 4,
 ):
     """
     Extract labels from the metadata and images using the OpenRouter API.
@@ -223,9 +233,14 @@ def extract_labels(
 
     taxonomy_df = extract_taxonomy_df(train_df)
 
-    for _, row in tqdm(test_df.iterrows(), total=len(test_df)):
-        process_row(row, taxonomy_df, image_root, output_path / "llm")
-        break
+    # Prepare arguments for each row
+    args_list = [
+        (row, taxonomy_df, image_root, output_path / "llm")
+        for _, row in test_df.iterrows()
+    ]
+
+    with multiprocessing.Pool(num_workers) as pool:
+        list(tqdm(pool.imap(process_row_wrapper, args_list), total=len(args_list)))
 
 
 if __name__ == "__main__":
