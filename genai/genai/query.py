@@ -11,6 +11,8 @@ from tqdm import tqdm
 import dotenv
 import multiprocessing
 from rapidfuzz import process as rf_process, fuzz as rf_fuzz
+import logging
+from datetime import datetime
 
 dotenv.load_dotenv()
 app = typer.Typer()
@@ -152,83 +154,158 @@ def ask_llm(
     return completion.json()
 
 
-def process_row(row, taxonomy_df, image_root, output_path):
-    # collect family, genus, and specificEpithet information and write them
-    # to disk for further processing
+def get_logger(log_dir):
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+    log_file = log_dir / f"run_{timestamp}.log.jsonl"
+    logger = logging.getLogger(str(log_file))
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler(log_file, mode="a")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    if not logger.hasHandlers():
+        logger.addHandler(handler)
+    return logger
+
+
+def process_row(row, taxonomy_df, image_root, output_path, logger):
     root = output_path / str(row.observationID)
     root.mkdir(parents=True, exist_ok=True)
     if (root / "_SUCESS").exists():
         print("skipping", row.observationID)
-        return
-
-    parent_list = []
-    for class_type in ["family", "genus", "species"]:
-        children = get_taxonomy_children(taxonomy_df, class_type, parent_list)
-        completion = ask_llm(row, image_root, class_type, children)
-        (root / f"completion_{class_type}.json").write_text(
-            json.dumps(completion, indent=2),
-        )
-        content = json.loads(completion["choices"][0]["message"]["content"])
-        (root / f"predictions_{class_type}.json").write_text(
-            json.dumps(content, indent=2)
-        )
-        pred = pd.DataFrame(content["predictions"])
-        matched_labels = []
-        mismatches = 0
-        for label in pred.label.tolist():
-            match = rf_process.extractOne(
-                label, children, scorer=rf_fuzz.WRatio, score_cutoff=90
+        logger.info(
+            json.dumps(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "observationID": row.observationID,
+                    "status": "skipped",
+                    "message": "Already processed (_SUCESS exists)",
+                }
             )
-            if match:
-                matched_labels.append(match[0])
-            else:
-                mismatches += 1
-        # more than 25% of 20
-        if mismatches > 5:
-            raise ValueError(
-                f"Too many unmatched predictions for {class_type} in obs {row.observationID}"
-                f" {mismatches} mismatches out of {len(pred)} predictions."
-                # figure out how many candidate labels there are
-                f" {len(children)} candidate labels."
+        )
+        return "skipped"
+    try:
+        parent_list = []
+        for class_type in ["family", "genus", "species"]:
+            children = get_taxonomy_children(taxonomy_df, class_type, parent_list)
+            completion = ask_llm(row, image_root, class_type, children)
+            (root / f"completion_{class_type}.json").write_text(
+                json.dumps(completion, indent=2),
             )
-        parent_list = matched_labels
+            content = json.loads(completion["choices"][0]["message"]["content"])
+            (root / f"predictions_{class_type}.json").write_text(
+                json.dumps(content, indent=2)
+            )
+            pred = pd.DataFrame(content["predictions"])
+            matched_labels = []
+            mismatches = 0
+            for label in pred.label.tolist():
+                match = rf_process.extractOne(
+                    label, children, scorer=rf_fuzz.WRatio, score_cutoff=90
+                )
+                if match:
+                    matched_labels.append(match[0])
+                else:
+                    mismatches += 1
+            if mismatches > 5:
+                raise ValueError(
+                    f"Too many unmatched predictions for {class_type}",
+                    {
+                        "error_type": "too_many_mismatches",
+                        "class_type": class_type,
+                        "mismatches": mismatches,
+                        "total": len(pred),
+                        "observationID": row.observationID,
+                    },
+                )
+            # write the parent list and children to a file
+            (root / f"labels_{class_type}.json").write_text(
+                json.dumps({
+                    "parent": parent_list,
+                    "children": matched_labels,
+                }, indent=2),
+            )
+            parent_list = matched_labels
 
-    # now we need to map the binomial names to the taxonomy
-    species_names = taxonomy_df["species"].tolist()
-    mapping = {row.species: row.category_id for _, row in taxonomy_df.iterrows()}
-    observations = []
-    for label in pred.label.tolist():
-        # Fuzzy match label to species_names
-        match = rf_process.extractOne(
-            label, species_names, scorer=rf_fuzz.WRatio, score_cutoff=90
+        # now we need to map the binomial names to the taxonomy
+        species_names = parent_list
+        mapping = {row.species: row.category_id for _, row in taxonomy_df.iterrows()}
+        observations = []
+        for label in species_names:
+            observations.append(mapping[label])
+        (root / "predictions.json").write_text(
+            json.dumps(
+                {
+                    "observationId": row.observationID,
+                    "predictions": " ".join([str(x) for x in observations][:10]),
+                },
+                indent=2,
+            )
         )
-        if match:
-            matched_species = match[0]
-            obs = mapping.get(matched_species)
-        else:
-            print("warning: no observation found for label", label)
-            continue
-        observations.append(obs)
-    (root / "predictions.json").write_text(
-        json.dumps(
-            {
-                "observationId": row.observationID,
-                "predictions": " ".join([str(x) for x in observations][:10]),
-            },
-            indent=2,
+        (root / "_SUCESS").touch()
+        logger.info(
+            json.dumps(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "observationID": row.observationID,
+                    "status": "success",
+                    "message": "Processed successfully",
+                }
+            )
         )
-    )
-    # write a success file
-    (root / "_SUCESS").touch()
+        return "success"
+    except json.JSONDecodeError as e:
+        logger.info(
+            json.dumps(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "observationID": row.observationID,
+                    "status": "error",
+                    "error_type": "bad_json_response",
+                    "message": str(e),
+                }
+            )
+        )
+        return "error"
+    except ValueError as e:
+        err_type = (
+            "too_many_mismatches"
+            if isinstance(e.args, tuple)
+            and len(e.args) > 1
+            and isinstance(e.args[1], dict)
+            and e.args[1].get("error_type")
+            else "value_error"
+        )
+        logger.info(
+            json.dumps(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "observationID": row.observationID,
+                    "status": "error",
+                    "error_type": err_type,
+                    "message": str(e),
+                }
+            )
+        )
+        return "error"
+    except Exception as e:
+        logger.info(
+            json.dumps(
+                {
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "observationID": row.observationID,
+                    "status": "error",
+                    "error_type": type(e).__name__,
+                    "message": str(e),
+                }
+            )
+        )
+        return "error"
 
 
 def process_row_wrapper(args):
-    row, taxonomy_df, image_root, output_path = args
-    try:
-        return process_row(row, taxonomy_df, image_root, output_path)
-    except Exception as e:
-        print(f"Error processing row {row.observationID}: {e}")
-        return None
+    row, taxonomy_df, image_root, output_path, logger = args
+    return process_row(row, taxonomy_df, image_root, output_path, logger)
 
 
 @app.command()
@@ -260,16 +337,28 @@ def extract_labels(
 
     taxonomy_df = extract_taxonomy_df(train_df)
 
+    logger = get_logger(output_path / "logs")
+
     # Prepare arguments for each row
     args_list = [
-        (row, taxonomy_df, image_root, output_path / "llm")
+        (row, taxonomy_df, image_root, output_path / "llm", logger)
         for _, row in test_df.iterrows()
     ]
     if limit > 0:
         args_list = args_list[:limit]
 
+    results = []
     with multiprocessing.Pool(num_workers) as pool:
-        list(tqdm(pool.imap(process_row_wrapper, args_list), total=len(args_list)))
+        for result in tqdm(
+            pool.imap(process_row_wrapper, args_list), total=len(args_list)
+        ):
+            results.append(result)
+
+    # Print summary
+    success_count = sum(1 for r in results if r == "success")
+    error_count = sum(1 for r in results if r == "error")
+    skipped_count = sum(1 for r in results if r == "skipped")
+    print(f"Success: {success_count}, Errors: {error_count}, Skipped: {skipped_count}")
 
 
 if __name__ == "__main__":
