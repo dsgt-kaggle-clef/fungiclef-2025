@@ -16,7 +16,7 @@ nvidia-smi                                                  # Check GPU usage
 # define paths
 scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
-dataset_name=train # train, val, test
+dataset_name=val # train, val, test
 embedding_dir=vit_base_patch16_384
 # models:
 # - vit_base_patch14_reg4_dinov2.lvd142m

@@ -2,7 +2,6 @@ import timm
 import torch
 import pytorch_lightning as pl
 
-from torchvision import transforms as T
 from fungiclef.config import get_device
 from fungiclef.model_setup import setup_fine_tuned_model
 
@@ -24,19 +23,6 @@ class EmbedModel(pl.LightningModule):
         self.model = self._get_model(model_name)
         self.model.to(self.model_device)
         self.model.eval()
-
-        # set up transform
-        self.transform = self._build_transform(resize_size)
-
-    def _build_transform(self, resize_size):
-        """Returns the image transform based on resize size."""
-        return T.Compose(
-            [
-                T.Resize((resize_size, resize_size)),
-                T.ToTensor(),
-                T.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-            ]
-        )
 
     def _get_model(self, model_name: str):
         """Load the model from the specified path."""

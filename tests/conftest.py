@@ -7,3 +7,13 @@ def spark(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("spark_data")
     with spark_resource(local_dir=tmp_path.as_posix()) as spark:
         yield spark
+
+
+@pytest.fixture(scope="session")
+def pandas_df():
+    import numpy as np
+    import pandas as pd
+    from PIL import Image
+
+    dummy_image = Image.fromarray(np.ones((384, 384, 3), dtype=np.uint8) * 255)
+    return pd.DataFrame({"data": [dummy_image]})  # dummy row
