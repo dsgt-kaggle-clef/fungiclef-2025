@@ -10,6 +10,7 @@ import json
 from tqdm import tqdm
 import dotenv
 import multiprocessing
+from rapidfuzz import process as rf_process, fuzz as rf_fuzz
 
 dotenv.load_dotenv()
 app = typer.Typer()
@@ -172,14 +173,39 @@ def process_row(row, taxonomy_df, image_root, output_path):
             json.dumps(content, indent=2)
         )
         pred = pd.DataFrame(content["predictions"])
-        parent_list = pred["label"].tolist()
+        matched_labels = []
+        mismatches = 0
+        for label in pred.label.tolist():
+            match = rf_process.extractOne(
+                label, children, scorer=rf_fuzz.WRatio, score_cutoff=90
+            )
+            if match:
+                matched_labels.append(match[0])
+            else:
+                mismatches += 1
+        # more than 25% of 20
+        if mismatches > 5:
+            raise ValueError(
+                f"Too many unmatched predictions for {class_type} in obs {row.observationID}"
+                f" {mismatches} mismatches out of {len(pred)} predictions."
+                # figure out how many candidate labels there are
+                f" {len(children)} candidate labels."
+            )
+        parent_list = matched_labels
 
     # now we need to map the binomial names to the taxonomy
+    species_names = taxonomy_df["species"].tolist()
     mapping = {row.species: row.category_id for _, row in taxonomy_df.iterrows()}
     observations = []
     for label in pred.label.tolist():
-        obs = mapping.get(label)
-        if not obs:
+        # Fuzzy match label to species_names
+        match = rf_process.extractOne(
+            label, species_names, scorer=rf_fuzz.WRatio, score_cutoff=90
+        )
+        if match:
+            matched_species = match[0]
+            obs = mapping.get(matched_species)
+        else:
             print("warning: no observation found for label", label)
             continue
         observations.append(obs)
@@ -210,6 +236,7 @@ def extract_labels(
     root: Path,
     output_path: Path,
     num_workers: int = 4,
+    limit: int = 0,
 ):
     """
     Extract labels from the metadata and images using the OpenRouter API.
@@ -238,6 +265,8 @@ def extract_labels(
         (row, taxonomy_df, image_root, output_path / "llm")
         for _, row in test_df.iterrows()
     ]
+    if limit > 0:
+        args_list = args_list[:limit]
 
     with multiprocessing.Pool(num_workers) as pool:
         list(tqdm(pool.imap(process_row_wrapper, args_list), total=len(args_list)))
