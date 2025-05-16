@@ -25,9 +25,9 @@ val_embed="val_embed"
 # - hf-hub:BVRA/beit_base_patch16_384.in1k_ft_df24_384
 # - hf-hub:BVRA/vit_base_patch16_224.in1k_ft_df24_224
 # - hf-hub:BVRA/swin_base_patch4_window12_384.in1k_ft_df24_384
-embedding_dir=swin_base_patch4_window12_384
+embedding_dir=vit_base_patch16_384
 model_type="linear" # "linear" or "mixup"
-model_name="swin-base-${model_type}-v1" # model name
+model_name="vit-base-384-${model_type}-v1" # model name
 
 # run the Python script
 fungiclef prediction train \

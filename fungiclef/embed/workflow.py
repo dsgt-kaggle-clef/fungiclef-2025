@@ -28,7 +28,7 @@ def pl_trainer_pipeline(
     )
 
     # initialize Model
-    model = EmbedModel(model_name=model_name)
+    model = EmbedModel(model_name=model_name, resize_size=resize_size)
 
     # define Trainer (inference mode)
     trainer = pl.Trainer(
