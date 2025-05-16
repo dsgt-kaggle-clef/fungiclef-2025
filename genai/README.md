@@ -10,4 +10,8 @@ Finally, we predict the species of the fungi.
 
 ```
 python -m genai.query ~/scratch/fungiclef-2025 ~/scratch/fungiclef-2025/processed/gemini-flash-001
+
+python -m genai.query ~/scratch/fungiclef-2025 ~/scratch/fungiclef-2025/processed/gemini-2.5-flash-preview --model google/gemini-2.5-flash-preview
+
+python -m genai.query ~/scratch/fungiclef-2025 ~/scratch/fungiclef-2025/processed/openai-gpt-4.1-mini --model openai/gpt-4.1-mini
 ```

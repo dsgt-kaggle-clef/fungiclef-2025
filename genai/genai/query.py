@@ -69,6 +69,7 @@ def ask_llm(
     classes: list[str] = [],
     api_key: str | None = os.getenv("OPENROUTER_API_KEY"),
     verbose: bool = False,
+    model = "google/gemini-2.0-flash-001",
 ) -> dict:
     if not api_key:
         raise ValueError("API key is required")
@@ -101,7 +102,7 @@ def ask_llm(
             "Content-Type": "application/json",
         },
         json=dict(
-            model="google/gemini-2.0-flash-001",
+            model=model,
             messages=[
                 {
                     "role": "user",
@@ -168,7 +169,7 @@ def get_logger(log_dir):
     return logger
 
 
-def process_row(row, taxonomy_df, image_root, output_path, logger):
+def process_row(row, taxonomy_df, image_root, output_path, logger, model):
     root = output_path / str(row.observationID)
     root.mkdir(parents=True, exist_ok=True)
     if (root / "_SUCESS").exists():
@@ -188,7 +189,7 @@ def process_row(row, taxonomy_df, image_root, output_path, logger):
         parent_list = []
         for class_type in ["family", "genus", "species"]:
             children = get_taxonomy_children(taxonomy_df, class_type, parent_list)
-            completion = ask_llm(row, image_root, class_type, children)
+            completion = ask_llm(row, image_root, class_type, children, model=model)
             (root / f"completion_{class_type}.json").write_text(
                 json.dumps(completion, indent=2),
             )
@@ -304,14 +305,15 @@ def process_row(row, taxonomy_df, image_root, output_path, logger):
 
 
 def process_row_wrapper(args):
-    row, taxonomy_df, image_root, output_path, logger = args
-    return process_row(row, taxonomy_df, image_root, output_path, logger)
+    row, taxonomy_df, image_root, output_path, logger, model = args
+    return process_row(row, taxonomy_df, image_root, output_path, logger, model)
 
 
 @app.command()
 def extract_labels(
     root: Path,
     output_path: Path,
+    model: str = "google/gemini-2.0-flash-001",
     num_workers: int = 4,
     limit: int = 0,
 ):
@@ -342,7 +344,7 @@ def extract_labels(
 
     # Prepare arguments for each row
     args_list = [
-        (row, taxonomy_df, image_root, output_path / "llm", logger)
+        (row, taxonomy_df, image_root, output_path / "llm", logger, model)
         for _, row in test_df.iterrows()
     ]
     if limit > 0:
