@@ -62,6 +62,65 @@ def encode_image(path):
     return f"data:image/jpeg;base64,{data}"
 
 
+def get_schema(model):
+    google = {
+        "type": "object",
+        "properties": {
+            "predictions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                        },
+                        "confidence": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5,
+                        },
+                    },
+                    "additionalProperties": False,
+                    "required": ["label", "confidence"],
+                },
+                "minItems": 20,
+                "maxItems": 20,
+            },
+            "reason": {
+                "type": "string",
+                "maxLength": 200,
+            },
+        },
+        "additionalProperties": False,
+        "required": ["predictions", "reason"],
+    }
+    openai = {
+        "type": "object",
+        "properties": {
+            "predictions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {"type": "string"},
+                        "confidence": {"type": "integer"},
+                    },
+                    "additionalProperties": False,
+                    "required": ["label", "confidence"],
+                },
+            },
+            "reason": {"type": "string"},
+        },
+        "additionalProperties": False,
+        "required": ["predictions", "reason"],
+    }
+    return {
+        "google": google,
+        "openai": openai,
+        "mistralai": openai,
+    }.get(model.split("/")[0], google)
+
+
 def ask_llm(
     row: pd.Series,
     image_root: Path,
@@ -69,7 +128,7 @@ def ask_llm(
     classes: list[str] = [],
     api_key: str | None = os.getenv("OPENROUTER_API_KEY"),
     verbose: bool = False,
-    model = "google/gemini-2.0-flash-001",
+    model="google/gemini-2.0-flash-001",
 ) -> dict:
     if not api_key:
         raise ValueError("API key is required")
@@ -108,10 +167,23 @@ def ask_llm(
                     "role": "user",
                     "content": [
                         {"type": "text", "text": contents},
-                        {
-                            "type": "image_url",
-                            "image_url": encode_image(image_root / row["filename"]),
-                        },
+                        # use all filenames instead of just the first one
+                        # {
+                        #     "type": "image_url",
+                        #     "image_url": encode_image(image_root / row["filename"]),
+                        # },
+                        # NOTE: in mixtral, we can only have 8 images max
+                        *[
+                            {
+                                "type": "image_url",
+                                "image_url": encode_image(image_root / filename),
+                            }
+                            for i, filename in enumerate(row["all_filenames"])
+                            if (
+                                (model.startswith("mistralai") and i < 8)
+                                or not model.startswith("mistralai")
+                            )
+                        ],
                     ],
                 },
             ],
@@ -121,33 +193,7 @@ def ask_llm(
                 "json_schema": {
                     "name": "fungiclef",
                     "strict": True,
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "predictions": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "label": {
-                                            "type": "string",
-                                        },
-                                        "confidence": {
-                                            "type": "integer",
-                                            "minimum": 1,
-                                            "maximum": 5,
-                                        },
-                                    },
-                                },
-                                "maxItems": 20,
-                                "minItems": 20,
-                            },
-                            "reason": {
-                                "type": "string",
-                                "maxLength": 200,
-                            },
-                        },
-                    },
+                    "schema": get_schema(model),
                 },
             },
         ),
@@ -208,7 +254,7 @@ def process_row(row, taxonomy_df, image_root, output_path, logger, model):
                     matched_labels.append(match[0])
                 else:
                     mismatches += 1
-            if mismatches > 5:
+            if mismatches > 10:
                 raise ValueError(
                     f"Too many unmatched predictions for {class_type}",
                     {
@@ -221,10 +267,13 @@ def process_row(row, taxonomy_df, image_root, output_path, logger, model):
                 )
             # write the parent list and children to a file
             (root / f"labels_{class_type}.json").write_text(
-                json.dumps({
-                    "parent": parent_list,
-                    "children": matched_labels,
-                }, indent=2),
+                json.dumps(
+                    {
+                        "parent": parent_list,
+                        "children": matched_labels,
+                    },
+                    indent=2,
+                ),
             )
             parent_list = matched_labels
 
@@ -336,6 +385,18 @@ def extract_labels(
     ]
     train_df = pd.read_csv(train_metadata_path)
     test_df = pd.read_csv(test_metadata_path)
+    # Add a column with all filenames for each observationID
+    filenames_map = (
+        test_df.merge(
+            test_df[["observationID", "filename"]],
+            on="observationID",
+            how="left",
+            suffixes=("", "_all"),
+        )
+        .groupby("observationID")["filename_all"]
+        .apply(list)
+    )
+    test_df["all_filenames"] = test_df["observationID"].map(filenames_map)
     test_df = test_df.drop_duplicates(subset=["observationID"], keep="first")
 
     taxonomy_df = extract_taxonomy_df(train_df)
