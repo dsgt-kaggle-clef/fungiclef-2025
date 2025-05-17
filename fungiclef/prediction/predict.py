@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fungiclef.config import get_class_mappings_file
 from fungiclef.torch.data import FungiDataModule
-from fungiclef.torch.model import LinearClassifier
+from fungiclef.torch.model import LinearClassifier, MultiObjectiveClassifier
 from fungiclef.torch.mixup import MixupClassifier
 
 
@@ -47,6 +47,7 @@ def generate_predictions(
     embedding_col: str = "embedding",
     id_col: str = "observationID",
     top_k: int = 10,
+    multi_objective: bool = False,
 ):
     """
     Generate predictions using a trained model.
@@ -88,7 +89,12 @@ def generate_predictions(
     # load trained model
     print(f"Loading model from {model_path}")
     classifier_cls = get_classifier_class(model_type)
-    model = classifier_cls.load_from_checkpoint(model_path)
+    if multi_objective:
+        model = MultiObjectiveClassifier.load_from_checkpoint(
+            model_path, model=LinearClassifier()
+        )
+    else:
+        model = classifier_cls.load_from_checkpoint(model_path)
     model.eval()
 
     # set device
@@ -186,6 +192,9 @@ def main(
     id_col: str = typer.Option(
         "observationID", help="Column name containing observation IDs"
     ),
+    multi_objective: bool = typer.Option(
+        False, help="True or False to use multi-objective"
+    ),
 ):
     # create output directory if it doesn't exist
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -201,4 +210,5 @@ def main(
         batch_size=batch_size,
         embedding_col=embedding_col,
         id_col=id_col,
+        multi_objective=multi_objective,
     )
