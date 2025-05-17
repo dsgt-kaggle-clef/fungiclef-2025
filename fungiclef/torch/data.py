@@ -1,6 +1,9 @@
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import WeightedRandomSampler
+from sklearn.utils.class_weight import compute_sample_weight
+from fungiclef.config import get_genus_mapping, get_species_mapping
 
 
 class FungiDataset(Dataset):
@@ -12,6 +15,7 @@ class FungiDataset(Dataset):
         embedding_col: str = "embeddings",
         label_col: str = None,
         has_labels: bool = True,
+        multi_objective: bool = False,
     ):
         """
         Args:
@@ -19,12 +23,13 @@ class FungiDataset(Dataset):
             transform: Image transformation function.
             col_name (str): Column name containing image bytes.
             label_col (str): Column name containing class labels.
-            training_mode (bool): If True, return image-label pairs for training.
+            has_labels (bool): If True, return image-label pairs for training.
         """
         self.df = df
         self.embedding_col = embedding_col
         self.label_col = label_col
         self.has_labels = has_labels
+        self.multi_objective = multi_objective
 
     def __len__(self):
         return len(self.df)
@@ -35,7 +40,13 @@ class FungiDataset(Dataset):
         embedding_tensor = torch.from_numpy(embedding_data.copy()).float()
         if self.has_labels:
             label = self.df.iloc[idx][self.label_col]
-            return embedding_tensor, label
+            if not self.multi_objective:
+                return embedding_tensor, label
+            else:
+                poisonous = self.df.iloc[idx]["poisonous"]
+                genus = self.df.iloc[idx]["genus_id"]
+                species = self.df.iloc[idx]["species_id"]
+                return embedding_tensor, label, poisonous, genus, species
         return embedding_tensor
 
 
@@ -51,6 +62,7 @@ class FungiDataModule(pl.LightningDataModule):
         num_workers=6,
         embedding_col="embedding",
         label_col="category_id",
+        multi_objective=False,
     ):
         super().__init__()
         self.train_df = train_df
@@ -62,17 +74,40 @@ class FungiDataModule(pl.LightningDataModule):
         self.label_col = label_col
         # Check if test data has labels
         self.test_has_labels = test_df is not None and label_col in test_df.columns
+        self.genus_ids = None  # Initialize mapping attributes to None
+        self.species_ids = None  # Initialize mapping attributes to None
+        self.multi_objective = (
+            multi_objective  # flag for multi-objective lossb True or False
+        )
 
     def setup(self, stage=None):
         """Set up dataset."""
-
         # Create datasets for each split
         if stage == "fit" or stage is None:
+            sample_weights = compute_sample_weight(
+                class_weight="balanced", y=self.train_df[self.label_col]
+            )
+            self.sampler = WeightedRandomSampler(
+                sample_weights, len(sample_weights), replacement=True
+            )
+            # conditional for multi-objective
+            if self.multi_objective:
+                self.train_df = self._add_mappings(self.train_df)
+                self.val_df = self._add_mappings(self.val_df)
+
             self.train_dataset = FungiDataset(
-                self.train_df, self.embedding_col, self.label_col, has_labels=True
+                self.train_df,
+                self.embedding_col,
+                self.label_col,
+                has_labels=True,
+                multi_objective=self.multi_objective,
             )
             self.val_dataset = FungiDataset(
-                self.val_df, self.embedding_col, self.label_col, has_labels=True
+                self.val_df,
+                self.embedding_col,
+                self.label_col,
+                has_labels=True,
+                multi_objective=self.multi_objective,
             )
         if stage == "test" or stage is None:
             self.test_dataset = FungiDataset(
@@ -80,6 +115,7 @@ class FungiDataModule(pl.LightningDataModule):
                 self.embedding_col,
                 self.label_col,
                 has_labels=self.test_has_labels,
+                multi_objective=False,
             )
 
         if stage == "predict" or stage is None:
@@ -89,6 +125,7 @@ class FungiDataModule(pl.LightningDataModule):
                 self.embedding_col,
                 self.label_col,
                 has_labels=self.test_has_labels,
+                multi_objective=False,
             )
 
     def predict_dataloader(self):
@@ -106,7 +143,8 @@ class FungiDataModule(pl.LightningDataModule):
         return DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
-            shuffle=True,  # consider shuffling
+            sampler=self.sampler,
+            # shuffle=True,  # shuffle if no sampler is used
             num_workers=self.num_workers,
             persistent_workers=True,
         )
@@ -130,3 +168,17 @@ class FungiDataModule(pl.LightningDataModule):
             num_workers=self.num_workers,
             persistent_workers=True,
         )
+
+    def _add_mappings(self, df):
+        """Add genus_id, species_id based on category_id"""
+        df = df.copy()
+        if self.genus_ids is None:
+            self.genus_ids = get_genus_mapping()
+        if self.species_ids is None:
+            self.species_ids = get_species_mapping()
+        if "genus_id" not in df.columns:
+            df["genus_id"] = df["category_id"].map(lambda cid: self.genus_ids[cid])
+        if "species_id" not in df.columns:
+            df["species_id"] = df["category_id"].map(lambda cid: self.species_ids[cid])
+
+        return df

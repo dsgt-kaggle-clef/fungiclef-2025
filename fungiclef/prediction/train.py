@@ -7,7 +7,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from fungiclef.config import get_device
 from fungiclef.torch.data import FungiDataModule
-from fungiclef.torch.model import LinearClassifier
+from fungiclef.torch.model import LinearClassifier, MultiObjectiveClassifier
 from fungiclef.torch.mixup import MixupClassifier
 
 
@@ -45,6 +45,7 @@ def train_fungi_classifier(
     model_name: str = "fungi-classifier",
     embedding_col: str = "embeddings",
     early_stopping_patience: int = 3,
+    multi_objective: bool = False,
 ):
     """
     Train a fungi classifier based on DINOv2 features.
@@ -88,11 +89,19 @@ def train_fungi_classifier(
         num_workers=num_workers,
         embedding_col=embedding_col,
         label_col="category_id",
+        multi_objective=multi_objective,
     )
 
     # create model
     classifier_cls = get_classifier_class(model_type)  # "linear" or "mixup"
     model = classifier_cls(batch_size=batch_size, learning_rate=learning_rate)
+
+    if multi_objective:
+        model = MultiObjectiveClassifier(
+            model=model, batch_size=batch_size, learning_rate=learning_rate
+        )
+    else:
+        model = classifier_cls(batch_size=batch_size, learning_rate=learning_rate)
 
     # Set up logger
     logger = TensorBoardLogger("logs", name="fungi-classifier")
@@ -147,6 +156,9 @@ def main(
         "embeddings", help="Column name containing embeddings"
     ),
     early_stopping_patience: int = typer.Option(3, help="Patience for early stopping"),
+    multi_objective: bool = typer.Option(
+        False, help="True or False to use multi-objective"
+    ),
 ):
     # Create output directory if it doesn't exist
     Path(output_model_path).mkdir(parents=True, exist_ok=True)
@@ -166,4 +178,5 @@ def main(
         model_name=model_name,
         embedding_col=embedding_col,
         early_stopping_patience=early_stopping_patience,
+        multi_objective=multi_objective,
     )
