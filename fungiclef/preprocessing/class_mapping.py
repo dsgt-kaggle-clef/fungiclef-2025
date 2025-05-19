@@ -17,11 +17,11 @@ def generate_class_mappings(
     """
     df = pd.read_csv(metadata_path)
 
-    if "category_id" not in df.columns:
+    if "genus" not in df.columns:
         raise ValueError("Expected column 'category_id' in metadata CSV.")
 
     # Get sorted unique species IDs
-    unique_ids = sorted(df["category_id"].unique())
+    unique_ids = sorted(df["genus"].unique())
     # index_to_category_id = {i: cid for i, cid in enumerate(unique_ids)}
 
     # Write them to the output file

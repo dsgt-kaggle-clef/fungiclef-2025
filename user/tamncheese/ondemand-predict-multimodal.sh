@@ -16,12 +16,9 @@ nvidia-smi                                                  # Check GPU usage
 # define paths
 scratch_data_dir=$(realpath ~/scratch/fungiclef/data)
 project_dir=/storage/coda1/p-dsgt_clef2025/0/shared/fungiclef
-test_parquet="test_serialized"
-test_embed="test_embed"
-model_name="plantclef-classifier-linear-weightSampler2024-multiObjective-epoch=04-val_loss=19.77.ckpt"
-embedding_dir="plantclef" # plantclef or dinov2
-csv_filename="weightSampler2024_plantclef_linear_multiObjective.csv" # prediction filename
-model_type="linear" # "linear" or "mixup"
+model_name="plantclef-multipleLinearLayer-classifier-weightSampler-multiObjective_v5-epoch=09-val_loss=16.00.ckpt"
+csv_filename="plantclef_multipleLinearLayer_classifier_weightSampler_multiObjective_v5.csv" # prediction filename
+
 multi_objective="True"  # True or False for multi_objective loss, must use linear model_type for multi_objective (for now)
 
 if [ "$multi_objective" = "True" ]; then
@@ -31,13 +28,13 @@ else
 fi
 
 # run the Python script
-fungiclef prediction predict \
-    $project_dir/data/dataset/processed/${test_parquet}.parquet \
-    $project_dir/data/embeddings/$embedding_dir/${test_embed}.parquet \
+fungiclef multimodalmultiobjective predict \
+    $project_dir/data/dataset/processed/test_serialized.parquet \
+    $project_dir/data/embeddings/plantclef/test_embed.parquet \
+    $project_dir/data/embeddings/bert/test_text_embed.parquet \
     $project_dir/model/classifier/$model_name \
     $project_dir/prediction/$csv_filename \
-    --model-type $model_type \
-    --cpu-count 4 \
     --batch-size 64 \
+    --cpu-count 4 \
     --embedding-col "embeddings" \
     $multi_objective_flag\

@@ -1,6 +1,7 @@
 import torch
-import pytorch_lightning as pl
 import torch.nn as nn
+import pytorch_lightning as pl
+import torch.nn.functional as F
 from fungiclef.config import (
     get_device,
     get_poison_mapping,
@@ -8,64 +9,9 @@ from fungiclef.config import (
     get_species_mapping,
 )
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss
-import torch.nn.functional as F
-
-
-class LinearClassifier(pl.LightningModule):
-    """PyTorch Lightning module for training a classifier on pre-extracted embeddings from parquet files."""
-
-    def __init__(
-        self,
-        batch_size: int = 64,
-        learning_rate: float = 1e-3,
-    ):
-        super().__init__()
-        self.model_device = get_device()
-        self.num_classes = 2427  # total fungi species, 0 to 2426 category ids
-        self.batch_size = batch_size
-        self.learning_rate = learning_rate
-        self.emb_dim = 768
-
-        # initialize the model
-        self.classifier = nn.Linear(self.emb_dim, self.num_classes)
-
-    def forward(self, embeddings):
-        """Extract embeddings using the [CLS] token."""
-        return self.classifier(embeddings)
-
-    def training_step(self, batch, batch_idx):
-        embeddings, labels = batch
-        logits = self(embeddings)  # forward pass
-        loss = nn.functional.cross_entropy(logits, labels)
-        self.log("train_loss", loss)
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        embeddings, labels = batch
-        logits = self(embeddings)  # forward pass
-        loss = nn.functional.cross_entropy(logits, labels)
-        acc = (logits.argmax(dim=1) == labels).float().mean()
-        self.log("val_loss", loss, prog_bar=True)
-        self.log("val_acc", acc, prog_bar=True)
-
-    def predict_step(self, batch, batch_idx):
-        """Runs inference on batch and returns embeddings and top-K logits."""
-        if isinstance(batch, tuple) and len(batch) == 2:
-            embeddings, _ = batch  # Ignore labels if present
-        else:
-            embeddings = batch  # Use just embeddings if no labels
-        # Move data to gpu if available
-        embeddings = embeddings.to(self.model_device)
-        logits = self(embeddings)
-        probabilities = torch.softmax(logits, dim=1)
-        return probabilities
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
 
 class MultiModalClassifier(pl.LightningModule):
-    ### copied from murilogustineli /multimodal/classifier.py can delete this after merging with his branch. see if need to delete the XXXXX_steps from classifier.py
     def __init__(self, lr=1e-3):
         super().__init__()
         self.save_hyperparameters()
@@ -119,6 +65,9 @@ class MultiModalClassifier(pl.LightningModule):
         probs = torch.softmax(logits, dim=1)
         return probs
 
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.lr)
+
 
 class MultiObjectiveClassifier(pl.LightningModule):
     """PyTorch Lightning module for training a multi-objective classifier on pre-extracted embeddings from parquet files."""
@@ -138,7 +87,6 @@ class MultiObjectiveClassifier(pl.LightningModule):
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.emb_dim = 768
-        self.hidden_dim = 1363  # geometric mean of 768 and 2427
         self.alpha = alpha
         self.poison_weighting = poison_weighting
 
@@ -157,15 +105,19 @@ class MultiObjectiveClassifier(pl.LightningModule):
         self.task_weights = nn.Parameter(torch.ones(4))
         self.initial_losses = torch.zeros(4, device=self.model_device)
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, image_embed, text_embed):
+        return self.model(image_embed, text_embed)
 
     def training_step(self, batch, batch_idx):
-        x, y_category_id, y_poison, y_genus, y_species = (
+        image_embed, text_embed, y_category_id, y_poison, y_genus, y_species = (
             batch  ## this currently only works with linear model. need to modify data loader to include text_embed
         )
-        logits = self.model(x)
+        logits = self.model(image_embed, text_embed)
         pred_species = logits.argmax(dim=1)
+
+        # Compute accuracy for main classification task
+        train_acc = (pred_species == y_category_id).float().mean()
+        self.log("train_acc", train_acc, prog_bar=True)
 
         # Loss 1: category_id classification
         loss_category_id = self.loss_category_id(logits, y_category_id)
@@ -203,6 +155,11 @@ class MultiObjectiveClassifier(pl.LightningModule):
         grads = torch.autograd.grad(total_loss, shared_params, create_graph=True)
         norms = torch.stack([g.norm() for g in grads])
         norm = norms.mean()
+        for i, g in enumerate(grads):
+            if g is None:
+                print(f"Grad {i} is None")
+            else:
+                print(f"Grad {i} norm: {g.norm().item()}")
 
         # Relative loss ratio
         loss_ratios = losses.detach() / self.initial_losses
@@ -224,14 +181,13 @@ class MultiObjectiveClassifier(pl.LightningModule):
                 "total_loss": total_loss,
             }
         )
-
         for i, w in enumerate(self.task_weights):
             self.log(f"task_weight_{i}", w.item(), on_epoch=True, prog_bar=True)
         return total_loss
 
     def validation_step(self, batch, batch_idx):
-        x, y_category_id, y_poison, y_genus, y_species = batch
-        logits = self.model(x)
+        image_embed, text_embed, y_category_id, y_poison, y_genus, y_species = batch
+        logits = self.model(image_embed, text_embed)
         pred_species = logits.argmax(dim=1)
 
         # Loss 1: category_id classification
@@ -287,15 +243,18 @@ class MultiObjectiveClassifier(pl.LightningModule):
         }
 
     def predict_step(self, batch, batch_idx):
-        if isinstance(batch, tuple) and len(batch) == 2:
-            embeddings, _ = batch  # Ignore labels if present
+        if isinstance(batch, tuple) and len(batch) == 3:
+            (
+                image_embed,
+                text_embed,
+                _,
+            ) = batch  # Ignore labels if present
         else:
-            embeddings = batch  # Use just embeddings if no labels
+            image_embed, text_embed = batch  # Use just embeddings if no labels
         # Move data to gpu if available
-        embeddings = embeddings.to(self.model_device)
-        logits = self(embeddings)
-        probabilities = torch.softmax(logits, dim=1)
-        return probabilities
+        logits = self.model(image_embed, text_embed)
+        probs = torch.softmax(logits, dim=1)
+        return probs
 
     def configure_optimizers(self):
         return torch.optim.Adam(
