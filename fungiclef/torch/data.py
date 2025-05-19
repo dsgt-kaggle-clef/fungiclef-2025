@@ -84,6 +84,38 @@ class FungiDataModule(pl.LightningDataModule):
         """Set up dataset."""
         # Create datasets for each split
         if stage == "fit" or stage is None:
+            # 2024 Weight Sampler Method
+            # class_labels = sorted(set(self.train_df[self.label_col]) | set(self.val_df[self.label_col]))
+            # label_to_index = {label: idx for idx, label in enumerate(class_labels)}
+            # num_classes = len(class_labels)
+
+            # # 2. Compute normalized train/val class distributions
+            # train_dist = np.ones(num_classes)  # initialize with 1 for smoothing
+            # val_dist = np.ones(num_classes)
+
+            # train_counts = self.train_df[self.label_col].value_counts()
+            # val_counts = self.val_df[self.label_col].value_counts()
+
+            # for label, count in train_counts.items():
+            #     train_dist[label_to_index[label]] += count
+
+            # for label, count in val_counts.items():
+            #     val_dist[label_to_index[label]] += count
+
+            # train_dist /= train_dist.sum()
+            # val_dist /= val_dist.sum()
+
+            # # 3. Compute class weights: val distribution over train distribution
+            # dist_weights = val_dist / train_dist
+
+            # # 4. Assign each training sample a weight based on its class
+            # _train_weights = [
+            #     dist_weights[label_to_index[label]] for label in self.train_df[self.label_col]
+            # ]
+
+            # self.sampler = WeightedRandomSampler(_train_weights, len(_train_weights), replacement=True)
+
+            # Step 3: Create WeightedRandomSampler
             sample_weights = compute_sample_weight(
                 class_weight="balanced", y=self.train_df[self.label_col]
             )

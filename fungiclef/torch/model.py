@@ -58,7 +58,7 @@ class LinearClassifier(pl.LightningModule):
         embeddings = embeddings.to(self.model_device)
         logits = self(embeddings)
         probabilities = torch.softmax(logits, dim=1)
-        return embeddings, probabilities
+        return probabilities
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
@@ -199,9 +199,6 @@ class MultiObjectiveClassifier(pl.LightningModule):
             self.initial_losses = losses.detach()
 
         # GradNorm
-        shared_params = list(self.model.parameters())[
-            0
-        ]  # first param (e.g. embedding layer)
         shared_params = [p for p in self.model.parameters() if p.requires_grad]
         grads = torch.autograd.grad(total_loss, shared_params, create_graph=True)
         norms = torch.stack([g.norm() for g in grads])
@@ -298,7 +295,7 @@ class MultiObjectiveClassifier(pl.LightningModule):
         embeddings = embeddings.to(self.model_device)
         logits = self(embeddings)
         probabilities = torch.softmax(logits, dim=1)
-        return embeddings, probabilities
+        return probabilities
 
     def configure_optimizers(self):
         return torch.optim.Adam(
